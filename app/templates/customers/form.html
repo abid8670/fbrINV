@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Customer' if customer else 'Add New Customer' }} - FBR DI{% endblock %}
+{% block page_title %}{{ 'Edit Customer' if customer else 'Add New Customer' }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-dark">
+                    <i class="bi bi-person-badge text-emerald me-1"></i> Customer / Buyer Registration
+                </h6>
+                <a href="{{ url_for('customers.index') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to List
+                </a>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-8">
+                            <label class="form-label fs-sm fw-semibold">Business / Individual Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" placeholder="e.g. Acme Corporation or Muhammad Ali" value="{{ customer.name if customer else '' }}" required>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">Buyer Tax Status <span class="text-danger">*</span></label>
+                            <select name="buyer_type" id="buyerTypeSelect" class="form-select">
+                                <option value="Registered" {{ 'selected' if customer and customer.buyer_type == 'Registered' else '' }}>Registered Buyer</option>
+                                <option value="Unregistered" {{ 'selected' if customer and customer.buyer_type == 'Unregistered' else '' }}>Unregistered (Walk-in)</option>
+                            </select>
+                        </div>
+
+                        <!-- Registered Tax Fields -->
+                        <div class="col-12 col-md-4" id="ntnWrapper">
+                            <label class="form-label fs-sm fw-semibold">Buyer NTN</label>
+                            <input type="text" name="ntn" class="form-control font-mono" placeholder="e.g. 1234567-8" value="{{ customer.ntn if customer else '' }}">
+                            <small class="text-muted fs-xs">7 digits (or 8 with check)</small>
+                        </div>
+
+                        <div class="col-12 col-md-4" id="strnWrapper">
+                            <label class="form-label fs-sm fw-semibold">Buyer STRN</label>
+                            <input type="text" name="strn" class="form-control font-mono" placeholder="e.g. 1700123456789" value="{{ customer.strn if customer else '' }}">
+                            <small class="text-muted fs-xs">Sales Tax Reg. Number</small>
+                        </div>
+
+                        <!-- Unregistered CNIC Field -->
+                        <div class="col-12 col-md-4" id="cnicWrapper">
+                            <label class="form-label fs-sm fw-semibold">Buyer CNIC</label>
+                            <input type="text" name="cnic" class="form-control font-mono" placeholder="e.g. 35202-1234567-1" value="{{ customer.cnic if customer else '' }}">
+                            <small class="text-muted fs-xs">Mandatory if value > PKR 50,000</small>
+                        </div>
+
+                        <!-- FBR ATL Verification Tool -->
+                        <div class="col-12">
+                            <div class="p-2.5 bg-light rounded border d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" id="verifyAtlBtn" class="btn btn-sm btn-outline-dark fw-semibold">
+                                        <i class="bi bi-shield-check me-1"></i> Check FBR ATL / Filer Status
+                                    </button>
+                                    <span id="atlStatusBadge" class="fs-xs fw-semibold"></span>
+                                </div>
+                                <small class="text-muted fs-xs">Validates NTN & sets 18% standard vs 4% further tax status under SRO 350</small>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fs-sm fw-semibold">Business Address</label>
+                            <input type="text" name="address" class="form-control" placeholder="Office / Shop / Plot address" value="{{ customer.address if customer else '' }}">
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">City</label>
+                            <input type="text" name="city" class="form-control" placeholder="e.g. Lahore, Karachi, Islamabad" value="{{ customer.city if customer else '' }}">
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">Province / Tax Jurisdiction</label>
+                            <select name="province" class="form-select">
+                                {% for prov in ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad Capital Territory', 'Gilgit-Baltistan', 'Azad Kashmir'] %}
+                                <option value="{{ prov }}" {{ 'selected' if customer and customer.province == prov else '' }}>{{ prov }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">Phone Number</label>
+                            <input type="text" name="phone" class="form-control" placeholder="03xx-xxxxxxx" value="{{ customer.phone if customer else '' }}">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Email Address</label>
+                            <input type="email" name="email" class="form-control" placeholder="buyer@example.com" value="{{ customer.email if customer else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('customers.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-emerald text-white fw-semibold">
+                            <i class="bi bi-check-lg me-1"></i> {{ 'Update Customer' if customer else 'Save Customer' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const verifyBtn = document.getElementById('verifyAtlBtn');
+    if (verifyBtn) {
+        verifyBtn.addEventListener('click', function() {
+            const ntn = document.querySelector('input[name="ntn"]').value.trim();
+            const cnic = document.querySelector('input[name="cnic"]').value.trim();
+            const statusSpan = document.getElementById('atlStatusBadge');
+            const identifier = ntn || cnic;
+
+            if (!identifier) {
+                statusSpan.innerHTML = '<span class="text-danger">Pehle NTN ya CNIC darj karein.</span>';
+                return;
+            }
+
+            statusSpan.innerHTML = '<span class="text-primary"><i class="spinner-border spinner-border-sm me-1"></i> Checking FBR ATL...</span>';
+
+            fetch('{{ url_for("customers.verify_atl") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ identifier: identifier })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    statusSpan.innerHTML = `<span class="badge ${data.is_filer ? 'bg-success' : 'bg-warning text-dark'} p-1.5"><i class="bi bi-check-circle-fill me-1"></i> ${data.status}</span> <span class="text-muted fs-xs">${data.message}</span>`;
+                    if (data.buyer_type) {
+                        document.getElementById('buyerTypeSelect').value = data.buyer_type;
+                    }
+                } else {
+                    statusSpan.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle me-1"></i> ${data.message}</span>`;
+                }
+            })
+            .catch(err => {
+                statusSpan.innerHTML = `<span class="text-danger">Error: ${err.message}</span>`;
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

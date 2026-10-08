@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit User & Permissions' if user else 'Create New User' }} - FBR DI{% endblock %}
+{% block page_title %}{{ 'Edit User & Permissions' if user else 'Create New User' }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-9">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-dark">
+                    <i class="bi bi-person-gear text-emerald me-1"></i> User Account & Access Control
+                </h6>
+                <a href="{{ url_for('users.index') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Users
+                </a>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <!-- Basic Info -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Username <span class="text-danger">*</span></label>
+                            <input type="text" name="username" class="form-control" placeholder="e.g. cashier1" value="{{ user.username if user else '' }}" {{ 'readonly' if user else 'required' }}>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" name="full_name" class="form-control" placeholder="e.g. Asad Ali" value="{{ user.full_name if user else '' }}" required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control" placeholder="user@company.com" value="{{ user.email if user else '' }}" required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">
+                                Password {{ '<span class="text-muted fs-xs">(Leave blank to keep current)</span>'|safe if user else '<span class="text-danger">*</span>'|safe }}
+                            </label>
+                            <input type="password" name="password" class="form-control" placeholder="{{ 'Leave blank to preserve password' if user else 'Choose strong password' }}" {{ '' if user else 'required' }}>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">System Role <span class="text-danger">*</span></label>
+                            <select name="role" id="roleSelector" class="form-select">
+                                <option value="admin" {{ 'selected' if user and user.role == 'admin' else '' }}>Administrator (Full Access)</option>
+                                <option value="manager" {{ 'selected' if user and user.role == 'manager' else '' }}>Manager (Invoicing, FBR Submit, Catalog)</option>
+                                <option value="operator" {{ 'selected' if user and user.role == 'operator' else ('' if user else 'selected') }}>Sales Operator / Cashier</option>
+                                <option value="viewer" {{ 'selected' if user and user.role == 'viewer' else '' }}>Viewer / Auditor (Read-only)</option>
+                            </select>
+                            <small class="text-muted fs-xs">Selecting a role presets default permissions below.</small>
+                        </div>
+                    </div>
+
+                    <!-- Granular Permissions Checklist -->
+                    <div class="p-3 bg-light rounded-3 border mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-bold m-0 text-dark">
+                                <i class="bi bi-shield-check text-primary me-1"></i> Granular Permissions Matrix
+                            </h6>
+                            <input type="hidden" name="custom_perms" value="1">
+                            <span class="fs-xs text-muted">You can customize individual permissions as needed</span>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input perm-check" type="checkbox" name="can_manage_invoices" id="perm_invoices" {{ 'checked' if (user and user.can_manage_invoices) or not user else '' }}>
+                                    <label class="form-check-label fw-semibold fs-sm" for="perm_invoices">
+                                        Manage Invoices
+                                        <small class="d-block text-muted fw-normal">Create, view, and edit sales invoices</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input perm-check" type="checkbox" name="can_submit_fbr" id="perm_fbr" {{ 'checked' if (user and user.can_submit_fbr) or not user else '' }}>
+                                    <label class="form-check-label fw-semibold fs-sm" for="perm_fbr">
+                                        Direct FBR DI API Submission
+                                        <small class="d-block text-muted fw-normal">Transmit invoices directly to FBR gateway</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input perm-check" type="checkbox" name="can_manage_items" id="perm_items" {{ 'checked' if (user and user.can_manage_items) or not user else '' }}>
+                                    <label class="form-check-label fw-semibold fs-sm" for="perm_items">
+                                        Manage Catalog & HS Codes
+                                        <small class="d-block text-muted fw-normal">Add and modify items, prices, and tariff codes</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input perm-check" type="checkbox" name="can_manage_customers" id="perm_customers" {{ 'checked' if (user and user.can_manage_customers) or not user else '' }}>
+                                    <label class="form-check-label fw-semibold fs-sm" for="perm_customers">
+                                        Manage Customers / Buyers
+                                        <small class="d-block text-muted fw-normal">Register and edit buyers (NTN/STRN/CNIC)</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input perm-check" type="checkbox" name="can_manage_users" id="perm_users" {{ 'checked' if (user and user.can_manage_users) else '' }}>
+                                    <label class="form-check-label fw-semibold fs-sm" for="perm_users">
+                                        Manage System Users & Roles
+                                        <small class="d-block text-muted fw-normal">Create accounts and assign permissions</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input perm-check" type="checkbox" name="can_edit_settings" id="perm_settings" {{ 'checked' if (user and user.can_edit_settings) else '' }}>
+                                    <label class="form-check-label fw-semibold fs-sm" for="perm_settings">
+                                        Manage FBR Gateway & Settings
+                                        <small class="d-block text-muted fw-normal">Update FBR Bearer Token and company details</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input perm-check" type="checkbox" name="can_export_data" id="perm_export" {{ 'checked' if (user and user.can_export_data) or not user else '' }}>
+                                    <label class="form-check-label fw-semibold fs-sm" for="perm_export">
+                                        Excel Hub & Annexure-C Export
+                                        <small class="d-block text-muted fw-normal">Download sales tax reports and spreadsheets</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('users.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-emerald text-white fw-semibold">
+                            <i class="bi bi-check-lg me-1"></i> {{ 'Update User & Permissions' if user else 'Save User' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const roleSelector = document.getElementById('roleSelector');
+    const pInvoices = document.getElementById('perm_invoices');
+    const pFbr = document.getElementById('perm_fbr');
+    const pItems = document.getElementById('perm_items');
+    const pCustomers = document.getElementById('perm_customers');
+    const pUsers = document.getElementById('perm_users');
+    const pSettings = document.getElementById('perm_settings');
+    const pExport = document.getElementById('perm_export');
+
+    roleSelector.addEventListener('change', function () {
+        const r = this.value;
+        if (r === 'admin') {
+            pInvoices.checked = true;
+            pFbr.checked = true;
+            pItems.checked = true;
+            pCustomers.checked = true;
+            pUsers.checked = true;
+            pSettings.checked = true;
+            pExport.checked = true;
+        } else if (r === 'manager') {
+            pInvoices.checked = true;
+            pFbr.checked = true;
+            pItems.checked = true;
+            pCustomers.checked = true;
+            pUsers.checked = false;
+            pSettings.checked = false;
+            pExport.checked = true;
+        } else if (r === 'operator') {
+            pInvoices.checked = true;
+            pFbr.checked = true;
+            pItems.checked = true;
+            pCustomers.checked = true;
+            pUsers.checked = false;
+            pSettings.checked = false;
+            pExport.checked = false;
+        } else if (r === 'viewer') {
+            pInvoices.checked = false;
+            pFbr.checked = false;
+            pItems.checked = false;
+            pCustomers.checked = false;
+            pUsers.checked = false;
+            pSettings.checked = false;
+            pExport.checked = true;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Wizard - FBR Digital Invoicing System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <style>
+        .db-card {
+            cursor: pointer;
+            border: 2px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        .db-card:hover {
+            border-color: #10b981;
+            transform: translateY(-2px);
+        }
+        .db-card.active {
+            border-color: #059669;
+            background-color: #ecfdf5;
+        }
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .step-circle.active {
+            background: #059669;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="bg-surface py-5">
+<div class="container" style="max-width: 860px;">
+    <!-- Logo & Header -->
+    <div class="text-center mb-4">
+        <div class="brand-logo-icon mx-auto mb-2" style="width: 54px; height: 54px; font-size: 1.8rem;">
+            <i class="bi bi-shield-check text-emerald"></i>
+        </div>
+        <h3 class="fw-bold tracking-tight text-dark m-0">FBR Digital Invoicing System</h3>
+        <p class="text-muted fs-sm">Initial System Configuration & Database Setup Wizard</p>
+    </div>
+
+    <!-- Alert Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="card-header bg-sidebar text-white p-4">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="fw-bold mb-1 text-white">First-Time Setup Wizard</h5>
+                    <p class="text-white-50 fs-xs m-0">Select your preferred database engine, establish company profile, and activate AI Voice assistance</p>
+                </div>
+                <span class="badge bg-emerald-subtle text-emerald fs-xs px-2 py-1">Ready-to-Deploy</span>
+            </div>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+            <form method="POST" id="setupForm">
+                <input type="hidden" name="db_type" id="dbTypeInput" value="{{ cfg.db_type or 'sqlite' }}">
+
+                <!-- STEP 1: Database Selection -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="step-circle active">1</div>
+                        <h6 class="fw-bold m-0 text-dark">Select Database Engine</h6>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <!-- SQLite Option -->
+                        <div class="col-12 col-md-4">
+                            <div class="card db-card p-3 rounded-3 h-100 {{ 'active' if cfg.db_type == 'sqlite' else '' }}" onclick="selectDbType('sqlite')">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <i class="bi bi-file-earmark-binary text-emerald fs-3"></i>
+                                    <span class="badge bg-emerald-subtle text-emerald fs-xs">Zero Config</span>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">SQLite (Embedded)</h6>
+                                <p class="text-muted fs-xs m-0">Ideal for Standalone Desktop .EXE and single-computer billing. No database server installation required.</p>
+                            </div>
+                        </div>
+
+                        <!-- MySQL Option -->
+                        <div class="col-12 col-md-4">
+                            <div class="card db-card p-3 rounded-3 h-100 {{ 'active' if cfg.db_type == 'mysql' else '' }}" onclick="selectDbType('mysql')">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <i class="bi bi-database-check text-primary fs-3"></i>
+                                    <span class="badge bg-primary-subtle text-primary fs-xs">Multi-User</span>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">MySQL / MariaDB</h6>
+                                <p class="text-muted fs-xs m-0">Recommended for multi-cashier LAN networks or shared local database servers.</p>
+                            </div>
+                        </div>
+
+                        <!-- PostgreSQL Option -->
+                        <div class="col-12 col-md-4">
+                            <div class="card db-card p-3 rounded-3 h-100 {{ 'active' if cfg.db_type == 'postgresql' else '' }}" onclick="selectDbType('postgresql')">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <i class="bi bi-hdd-network text-info fs-3"></i>
+                                    <span class="badge bg-info-subtle text-info fs-xs">Enterprise</span>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">PostgreSQL</h6>
+                                <p class="text-muted fs-xs m-0">Enterprise-grade ACID compliance for high-volume corporate invoicing pipelines.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MySQL Config Panel -->
+                    <div id="mysqlFields" class="p-3 bg-light rounded-3 border mb-3" style="display: none;">
+                        <h6 class="fw-bold fs-sm text-dark mb-2"><i class="bi bi-gear-wide me-1"></i> MySQL Connection Parameters</h6>
+                        <div class="row g-2">
+                            <div class="col-8 col-md-5">
+                                <label class="form-label fs-xs fw-semibold">Server Host</label>
+                                <input type="text" name="mysql_host" id="mysql_host" class="form-control form-control-sm font-mono" value="{{ cfg.mysql.host or 'localhost' }}">
+                            </div>
+                            <div class="col-4 col-md-2">
+                                <label class="form-label fs-xs fw-semibold">Port</label>
+                                <input type="number" name="mysql_port" id="mysql_port" class="form-control form-control-sm font-mono" value="{{ cfg.mysql.port or 3306 }}">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label fs-xs fw-semibold">DB User</label>
+                                <input type="text" name="mysql_user" id="mysql_user" class="form-control form-control-sm font-mono" value="{{ cfg.mysql.user or 'root' }}">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label fs-xs fw-semibold">DB Password</label>
+                                <input type="password" name="mysql_password" id="mysql_password" class="form-control form-control-sm font-mono" value="{{ cfg.mysql.password or '' }}">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fs-xs fw-semibold">Database Name</label>
+                                <input type="text" name="mysql_database" id="mysql_database" class="form-control form-control-sm font-mono" value="{{ cfg.mysql.database or 'fbr_invoicing' }}">
+                            </div>
+                            <div class="col-12 col-md-6 d-flex align-items-end">
+                                <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="testConnection('mysql')">
+                                    <i class="bi bi-wifi me-1"></i> Test MySQL Connection
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PostgreSQL Config Panel -->
+                    <div id="postgresqlFields" class="p-3 bg-light rounded-3 border mb-3" style="display: none;">
+                        <h6 class="fw-bold fs-sm text-dark mb-2"><i class="bi bi-gear-wide me-1"></i> PostgreSQL Connection Parameters</h6>
+                        <div class="row g-2">
+                            <div class="col-8 col-md-5">
+                                <label class="form-label fs-xs fw-semibold">Server Host</label>
+                                <input type="text" name="postgresql_host" id="postgresql_host" class="form-control form-control-sm font-mono" value="{{ cfg.postgresql.host or 'localhost' }}">
+                            </div>
+                            <div class="col-4 col-md-2">
+                                <label class="form-label fs-xs fw-semibold">Port</label>
+                                <input type="number" name="postgresql_port" id="postgresql_port" class="form-control form-control-sm font-mono" value="{{ cfg.postgresql.port or 5432 }}">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label fs-xs fw-semibold">DB User</label>
+                                <input type="text" name="postgresql_user" id="postgresql_user" class="form-control form-control-sm font-mono" value="{{ cfg.postgresql.user or 'postgres' }}">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label fs-xs fw-semibold">DB Password</label>
+                                <input type="password" name="postgresql_password" id="postgresql_password" class="form-control form-control-sm font-mono" value="{{ cfg.postgresql.password or '' }}">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fs-xs fw-semibold">Database Name</label>
+                                <input type="text" name="postgresql_database" id="postgresql_database" class="form-control form-control-sm font-mono" value="{{ cfg.postgresql.database or 'fbr_invoicing' }}">
+                            </div>
+                            <div class="col-12 col-md-6 d-flex align-items-end">
+                                <button type="button" class="btn btn-sm btn-outline-info w-100" onclick="testConnection('postgresql')">
+                                    <i class="bi bi-wifi me-1"></i> Test PostgreSQL Connection
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="testDbStatus" class="fs-xs fw-bold mt-1"></div>
+                </div>
+
+                <!-- STEP 2: Company Profile -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="step-circle active">2</div>
+                        <h6 class="fw-bold m-0 text-dark">Seller / Business Tax Profile</h6>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Business / Company Name <span class="text-danger">*</span></label>
+                            <input type="text" name="company_name" class="form-control" value="Apex Technologies (Pvt) Limited" required>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">Seller NTN <span class="text-danger">*</span></label>
+                            <input type="text" name="seller_ntn" class="form-control font-mono" value="7291845-3" required>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">Seller STRN <span class="text-danger">*</span></label>
+                            <input type="text" name="seller_strn" class="form-control font-mono" value="3277876123456" required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Registered Address</label>
+                            <input type="text" name="business_address" class="form-control" value="Plot 45-B, Sector I-9/2, Industrial Area">
+                        </div>
+
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">City</label>
+                            <input type="text" name="city" class="form-control" value="Islamabad">
+                        </div>
+
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">Province</label>
+                            <input type="text" name="province" class="form-control" value="Islamabad">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Admin Account -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="step-circle active">3</div>
+                        <h6 class="fw-bold m-0 text-dark">Administrator Account Credentials</h6>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">Username <span class="text-danger">*</span></label>
+                            <input type="text" name="admin_username" class="form-control" value="admin" required>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">Password <span class="text-danger">*</span></label>
+                            <input type="password" name="admin_password" class="form-control" value="admin123" required>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">Full Name</label>
+                            <input type="text" name="admin_name" class="form-control" value="System Administrator">
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">Email</label>
+                            <input type="email" name="admin_email" class="form-control" value="admin@fbr-invoice.pk">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: AI Voice Assistant -->
+                <div class="mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="step-circle active">4</div>
+                        <h6 class="fw-bold m-0 text-dark">AI Voice Assistant & Audio Guidance</h6>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" name="ai_voice_enabled" id="aiVoiceToggle" checked>
+                                <label class="form-check-label fw-bold text-dark fs-sm" for="aiVoiceToggle">
+                                    <i class="bi bi-soundwave text-emerald me-1"></i> Enable Interactive Voice Assistant
+                                </label>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-dark" onclick="testVoiceSpeech()">
+                                <i class="bi bi-volume-up-fill me-1"></i> Test Voice Sample
+                            </button>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fs-xs fw-semibold">Spoken Language</label>
+                                <select name="ai_voice_language" id="voiceLangSelect" class="form-select form-select-sm">
+                                    <option value="en-US" selected>English (en-US)</option>
+                                    <option value="ur-PK">Urdu (Pakistan - ur-PK)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fs-xs fw-semibold">TTS Voice Provider</label>
+                                <select name="ai_voice_provider" id="setupVoiceProvider" class="form-select form-select-sm">
+                                    <option value="browser" selected>Native Browser Speech API (Free / Zero Config)</option>
+                                    <option value="google_ai_studio">Google AI Studio (Gemini AI Free API Key)</option>
+                                    <option value="google_tts">Google Cloud Neural TTS (Google Cloud GCP)</option>
+                                    <option value="openai">OpenAI Neural Voice (Optional)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fs-xs fw-semibold">API Key <small class="text-muted">(aistudio.google.com)</small></label>
+                                <input type="password" name="ai_voice_api_key" id="setupVoiceApiKey" class="form-control form-control-sm font-mono" placeholder="AIzaSy... (Leave empty for free browser voice)">
+                            </div>
+
+                            <div class="col-12">
+                                <div id="setupVoiceStatus" class="fs-xs fw-semibold"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-emerald text-white py-3 fs-6 fw-bold shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Complete Setup & Launch System
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectDbType(type) {
+    document.querySelectorAll('.db-card').forEach(el => el.classList.remove('active'));
+    document.getElementById('dbTypeInput').value = type;
+
+    const cards = document.querySelectorAll('.db-card');
+    if (type === 'sqlite') cards[0].classList.add('active');
+    if (type === 'mysql') cards[1].classList.add('active');
+    if (type === 'postgresql') cards[2].classList.add('active');
+
+    document.getElementById('mysqlFields').style.display = (type === 'mysql') ? 'block' : 'none';
+    document.getElementById('postgresqlFields').style.display = (type === 'postgresql') ? 'block' : 'none';
+}
+
+function testConnection(type) {
+    const statusEl = document.getElementById('testDbStatus');
+    statusEl.innerHTML = '<span class="text-primary"><i class="spinner-border spinner-border-sm me-1"></i> Testing connection...</span>';
+
+    const params = {
+        host: document.getElementById(`${type}_host`).value,
+        port: document.getElementById(`${type}_port`).value,
+        user: document.getElementById(`${type}_user`).value,
+        password: document.getElementById(`${type}_password`).value,
+        database: document.getElementById(`${type}_database`).value
+    };
+
+    fetch('{{ url_for("setup.test_db") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({db_type: type, params: params})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            statusEl.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> ${data.message}</span>`;
+        } else {
+            statusEl.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i> ${data.message}</span>`;
+        }
+    })
+    .catch(err => {
+        statusEl.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i> Error: ${err.message}</span>`;
+    });
+}
+
+function testVoiceSpeech() {
+    const statusEl = document.getElementById('setupVoiceStatus');
+    const lang = document.getElementById('voiceLangSelect').value;
+    const provider = document.getElementById('setupVoiceProvider').value;
+    const apiKey = document.getElementById('setupVoiceApiKey').value;
+
+    statusEl.innerHTML = '<span class="text-primary"><i class="spinner-border spinner-border-sm me-1"></i> Validating Voice / AI Key...</span>';
+
+    fetch('{{ url_for("setup.test_voice") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({provider: provider, api_key: apiKey, language: lang})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            statusEl.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> ${data.message}</span>`;
+            if (data.audio_base64 && window.fbrPlayBase64) {
+                window.fbrPlayBase64(data.audio_base64);
+            } else if (data.text_to_speak && window.fbrSpeak) {
+                window.fbrSpeak(data.text_to_speak, lang);
+            } else if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(data.text_to_speak || "Voice ready");
+                utter.lang = lang;
+                window.speechSynthesis.speak(utter);
+            }
+        } else {
+            statusEl.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i> ${data.message}</span>`;
+            if ('speechSynthesis' in window) {
+                const utter = new SpeechSynthesisUtterance(lang === 'ur-PK' ? "Browser voice active hai" : "Native browser voice is active");
+                utter.lang = lang;
+                window.speechSynthesis.speak(utter);
+            }
+        }
+    })
+    .catch(err => {
+        statusEl.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i> Error: ${err.message}</span>`;
+    });
+}
+
+// Initial state
+document.addEventListener('DOMContentLoaded', function() {
+    const currentType = document.getElementById('dbTypeInput').value;
+    selectDbType(currentType);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Receipt (80mm) - {{ invoice.invoice_number }}</title>
+    <style>
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+        body {
+            font-family: 'Courier New', Courier, monospace, 'Segoe UI', Tahoma, sans-serif;
+            font-size: 11px;
+            color: #000;
+            background: #fff;
+            margin: 0;
+            padding: 8px 6px;
+            width: 78mm;
+            max-width: 78mm;
+            box-sizing: border-box;
+        }
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        .text-start { text-align: left; }
+        .fw-bold { font-weight: bold; }
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 5px 0;
+        }
+        .divider-double {
+            border-top: 2px solid #000;
+            margin: 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+        }
+        table th, table td {
+            padding: 2px 0;
+        }
+        .qr-box {
+            text-align: center;
+            margin: 6px 0;
+        }
+        .qr-box img {
+            width: 110px;
+            height: 110px;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 4px; }
+        }
+        .btn-print {
+            background: #000;
+            color: #fff;
+            padding: 6px 14px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print text-center" style="margin-bottom: 12px;">
+        <button class="btn-print" onclick="window.print()">🖨️ Print 80mm Receipt</button>
+        <button class="btn-print" style="background:#555;" onclick="window.close()">Close</button>
+    </div>
+
+    <!-- Store Header -->
+    <div class="text-center">
+        <div class="fw-bold" style="font-size: 14px; text-transform: uppercase;">{{ settings.company_name }}</div>
+        <div>{{ settings.business_address }}</div>
+        <div>{{ settings.city }}, {{ settings.province }} &bull; Ph: {{ settings.phone }}</div>
+        <div class="fw-bold">NTN: {{ settings.ntn }} &bull; STRN: {{ settings.strn }}</div>
+        {% if settings.pos_id or settings.branch_code %}
+        <div>POS: {{ settings.pos_id }} &bull; Branch: {{ settings.branch_code }}</div>
+        {% endif %}
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="text-center fw-bold" style="font-size: 12px;">
+        {% if invoice.invoice_type == 'Credit Note' %}
+            *** SALES RETURN (CREDIT NOTE) ***
+        {% elif invoice.invoice_type == 'Debit Note' %}
+            *** DEBIT NOTE (ADJUSTMENT) ***
+        {% else %}
+            *** FBR DIGITAL TAX INVOICE ***
+        {% endif %}
+    </div>
+    <div class="text-center" style="font-size: 9.5px;">(Sec 23 &bull; Sales Tax Act 1990 &bull; SRO 350)</div>
+
+    <div class="divider"></div>
+
+    <!-- Invoice Metas -->
+    <div>
+        <div><strong>Inv #:</strong> {{ invoice.invoice_number }}</div>
+        <div><strong>Date:</strong> {{ invoice.invoice_date.strftime('%d-%b-%Y') }} {{ invoice.created_at.strftime('%I:%M %p') }}</div>
+        <div><strong>Buyer:</strong> {{ invoice.customer.name }} ({{ invoice.customer.buyer_type }})</div>
+        {% if invoice.customer.ntn %}<div><strong>Buyer NTN:</strong> {{ invoice.customer.ntn }}</div>{% endif %}
+        {% if invoice.customer.cnic %}<div><strong>Buyer CNIC:</strong> {{ invoice.customer.cnic }}</div>{% endif %}
+        {% if invoice.created_by %}<div><strong>Cashier:</strong> {{ invoice.created_by.full_name }}</div>{% endif %}
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Items List -->
+    <table>
+        <thead>
+            <tr style="border-bottom: 1px dashed #000;">
+                <th class="text-start" style="width: 48%;">Item</th>
+                <th class="text-center" style="width: 16%;">Qty</th>
+                <th class="text-end" style="width: 18%;">Rate</th>
+                <th class="text-end" style="width: 18%;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice.items %}
+            <tr>
+                <td colspan="4" class="fw-bold text-start" style="padding-top: 3px;">
+                    {{ item.description }}
+                    <span style="font-size: 9px; font-weight: normal; color: #444;">(HS: {{ item.hs_code }})</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="text-start" style="font-size: 9.5px;">Tax: {{ item.sales_tax_rate }}%</td>
+                <td class="text-center">{{ item.quantity | round(2) }} {{ item.uom }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(item.unit_price) }}</td>
+                <td class="text-end fw-bold">{{ "{:,.2f}".format(item.total_amount) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="divider"></div>
+
+    <!-- Financial Breakdown -->
+    <table>
+        <tr>
+            <td class="text-start">Value of Supply (Excl.):</td>
+            <td class="text-end font-mono">PKR {{ "{:,.2f}".format(invoice.total_value_of_supply) }}</td>
+        </tr>
+        <tr>
+            <td class="text-start">Sales Tax (18%):</td>
+            <td class="text-end font-mono">PKR {{ "{:,.2f}".format(invoice.total_sales_tax) }}</td>
+        </tr>
+        {% if invoice.total_further_tax > 0 %}
+        <tr>
+            <td class="text-start">Further Tax (4% Unreg):</td>
+            <td class="text-end font-mono">PKR {{ "{:,.2f}".format(invoice.total_further_tax) }}</td>
+        </tr>
+        {% endif %}
+        {% if invoice.total_discount > 0 %}
+        <tr>
+            <td class="text-start">Discount:</td>
+            <td class="text-end font-mono">-PKR {{ "{:,.2f}".format(invoice.total_discount) }}</td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <div class="divider-double"></div>
+
+    <!-- Grand Total -->
+    <table>
+        <tr style="font-size: 13px;">
+            <td class="text-start fw-bold">NET GRAND TOTAL:</td>
+            <td class="text-end fw-bold font-mono">PKR {{ "{:,.2f}".format(invoice.grand_total) }}</td>
+        </tr>
+        <tr>
+            <td class="text-start">Payment Mode:</td>
+            <td class="text-end">{{ invoice.payment_mode }}</td>
+        </tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <div style="font-size: 9.5px; text-transform: uppercase;">
+        <strong>Rupees in Words:</strong><br>
+        {{ invoice.grand_total | pkr_words }}
+    </div>
+
+    <!-- FBR Verification Section -->
+    <div class="divider"></div>
+    <div class="text-center">
+        {% if invoice.fbr_qr_image_base64 %}
+        <div class="qr-box">
+            <img src="data:image/png;base64,{{ invoice.fbr_qr_image_base64 }}" alt="FBR QR Code">
+        </div>
+        {% endif %}
+
+        {% if invoice.fbr_invoice_number %}
+        <div class="fw-bold" style="font-size: 10px;">FBR FISCAL INVOICE NO:</div>
+        <div class="fw-bold font-mono" style="font-size: 11px;">{{ invoice.fbr_invoice_number }}</div>
+        <div style="font-size: 9.5px; color: #222;">Status: VERIFIED &bull; SRO 350(I)/2024</div>
+        {% else %}
+        <div style="font-size: 10px;">[ FBR Offline / Draft Mode ]</div>
+        {% endif %}
+        <div style="font-size: 9px; margin-top: 4px;">
+            Verify authenticity via FBR Asaan Tax App
+        </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="text-center" style="font-size: 10px;">
+        Thank you for your business!<br>
+        Software by FBR Digital Invoicing System
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            // Auto open print dialog if opened in new window
+            setTimeout(() => { window.print(); }, 400);
+        });
+    </script>
+</body>
+</html>

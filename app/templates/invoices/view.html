@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}{{ invoice.invoice_type }} {{ invoice.invoice_number }} - FBR DI{% endblock %}
+{% block page_title %}{{ invoice.invoice_type }} &bull; {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<!-- Top Action Bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('invoices.index') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Invoices
+        </a>
+        <span class="text-muted">|</span>
+        <span class="fs-sm fw-bold text-dark">{{ invoice.invoice_number }}</span>
+        <span class="badge {{ 'bg-success-subtle text-success border border-success-subtle' if invoice.status == 'FBR_Submitted' else ('bg-warning-subtle text-warning-emphasis border border-warning-subtle' if invoice.status == 'Draft' else 'bg-danger-subtle text-danger border border-danger-subtle') }}">
+            {{ invoice.status }}
+        </span>
+        <span class="badge bg-secondary-subtle text-secondary border fs-xs">{{ invoice.invoice_type }}</span>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('invoices.print_invoice', id=invoice.id) }}" target="_blank" class="btn btn-sm btn-outline-dark">
+            <i class="bi bi-printer me-1"></i> A4 Print / PDF
+        </a>
+
+        <a href="{{ url_for('invoices.print_thermal', id=invoice.id) }}" target="_blank" class="btn btn-sm btn-outline-dark" title="Print 80mm Thermal Receipt">
+            <i class="bi bi-receipt me-1"></i> 80mm POS Slip
+        </a>
+
+        <button type="button" class="btn btn-sm btn-success text-white fw-semibold" onclick="shareViaWhatsApp()" title="Share Invoice on WhatsApp">
+            <i class="bi bi-whatsapp me-1"></i> WhatsApp
+        </button>
+
+        <!-- Issue Credit Note or Debit Note if original invoice was submitted -->
+        {% if invoice.status == 'FBR_Submitted' and invoice.invoice_type == 'Sales Invoice' and current_user.has_perm('can_manage_invoices') %}
+        <a href="{{ url_for('invoices.create', type='Credit Note', ref_id=invoice.id) }}" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-arrow-return-left me-1"></i> Issue Credit Note (Return)
+        </a>
+        <a href="{{ url_for('invoices.create', type='Debit Note', ref_id=invoice.id) }}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-plus-slash-minus me-1"></i> Issue Debit Note
+        </a>
+        {% endif %}
+
+        {% if invoice.status != 'FBR_Submitted' and current_user.has_perm('can_submit_fbr') %}
+        <form action="{{ url_for('invoices.post_fbr', id=invoice.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Transmit invoice {{ invoice.invoice_number }} to FBR Digital Invoicing Gateway?');">
+            <button type="submit" class="btn btn-sm btn-emerald text-white fw-semibold">
+                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Transmit to FBR DI API
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- FBR Fiscal Status Banner -->
+{% if invoice.status == 'FBR_Submitted' %}
+<div class="card border-0 shadow-sm bg-success-subtle text-success-emphasis mb-4 border-start border-success border-4">
+    <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-start gap-3">
+            <div class="brand-logo-icon bg-success text-white" style="width: 44px; height: 44px; font-size: 1.5rem;">
+                <i class="bi bi-patch-check-fill"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold mb-1 text-success-emphasis">FBR Digital Invoicing Verified & Registered</h5>
+                <p class="mb-1 fs-sm">
+                    FBR Fiscal Invoice Number: <strong class="font-mono text-dark">{{ invoice.fbr_invoice_number }}</strong>
+                </p>
+                <div class="fs-xs text-muted">
+                    Submitted: {{ invoice.fbr_submitted_at.strftime('%d-%b-%Y %I:%M:%S %p') if invoice.fbr_submitted_at else 'Verified' }} &bull; Response Code: {{ invoice.fbr_status_code or '00' }}
+                </div>
+            </div>
+        </div>
+        {% if invoice.fbr_qr_image_base64 %}
+        <div class="text-center bg-white p-2 rounded shadow-sm border">
+            <img src="data:image/png;base64,{{ invoice.fbr_qr_image_base64 }}" alt="FBR QR Code" style="width: 85px; height: 85px;">
+            <div class="fs-xs text-muted mt-1 font-mono">FBR QR</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% elif invoice.status == 'Draft' %}
+<div class="card border-0 shadow-sm bg-warning-subtle text-warning-emphasis mb-4 border-start border-warning border-4">
+    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-clock-history fs-4 text-warning"></i>
+            <div>
+                <strong>Draft Mode:</strong> This invoice is stored locally and has not been transmitted to the FBR gateway yet.
+            </div>
+        </div>
+        {% if current_user.has_perm('can_submit_fbr') %}
+        <form action="{{ url_for('invoices.post_fbr', id=invoice.id) }}" method="POST">
+            <button type="submit" class="btn btn-warning btn-sm fw-semibold text-dark">
+                <i class="bi bi-send-fill me-1"></i> Send to FBR Now
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="card border-0 shadow-sm bg-danger-subtle text-danger-emphasis mb-4 border-start border-danger border-4">
+    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-octagon fs-4 text-danger"></i>
+            <div>
+                <strong>FBR Transmission Failed:</strong> {{ invoice.fbr_response_message or 'Error validating payload.' }}
+            </div>
+        </div>
+        {% if current_user.has_perm('can_submit_fbr') %}
+        <form action="{{ url_for('invoices.post_fbr', id=invoice.id) }}" method="POST">
+            <button type="submit" class="btn btn-danger btn-sm fw-semibold">
+                <i class="bi bi-arrow-repeat me-1"></i> Retry Submission
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- If this is a Credit / Debit Note, show reference banner -->
+{% if invoice.original_fbr_invoice_number or invoice.reason_for_issuance %}
+<div class="alert alert-secondary border d-flex align-items-center justify-content-between mb-4 shadow-sm">
+    <div>
+        <i class="bi bi-arrow-left-right me-1 text-primary"></i>
+        <strong>Referenced Original Invoice:</strong>
+        <span class="font-mono fw-bold">{{ invoice.original_fbr_invoice_number or 'Local Ref' }}</span>
+        {% if invoice.reason_for_issuance %}
+            &nbsp;|&nbsp; <strong>Reason:</strong> {{ invoice.reason_for_issuance }}
+        {% endif %}
+    </div>
+    {% if invoice.original_invoice %}
+    <a href="{{ url_for('invoices.view', id=invoice.original_invoice.id) }}" class="btn btn-sm btn-outline-secondary">
+        View Original
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Invoice Body Card -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4 p-md-5">
+        <!-- Header Info -->
+        <div class="row g-4 pb-4 border-bottom">
+            <div class="col-12 col-md-6">
+                <span class="badge bg-emerald-subtle text-emerald fs-xs fw-bold px-2 py-1 mb-2">SELLER (SUPPLIER)</span>
+                <h4 class="fw-bold text-dark mb-1">{{ settings.company_name }}</h4>
+                <div class="text-muted fs-sm">{{ settings.business_address }}, {{ settings.city }}</div>
+                <div class="text-muted fs-sm">Phone: {{ settings.phone }} &bull; Email: {{ settings.email }}</div>
+                <div class="mt-2 font-mono fs-sm">
+                    <strong>NTN:</strong> {{ settings.ntn }} &nbsp;|&nbsp; <strong>STRN:</strong> {{ settings.strn }}
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 text-md-end">
+                <span class="badge bg-secondary-subtle text-secondary fs-xs fw-bold px-2 py-1 mb-2">{{ invoice.invoice_type|upper }}</span>
+                <h3 class="fw-bold font-mono text-dark mb-1">{{ invoice.invoice_number }}</h3>
+                <div class="text-muted fs-sm">Date: <strong class="text-dark font-mono">{{ invoice.invoice_date.strftime('%d-%b-%Y') }}</strong></div>
+                <div class="text-muted fs-sm">Payment Mode: <strong class="text-dark">{{ invoice.payment_mode }}</strong></div>
+                {% if invoice.fbr_invoice_number %}
+                <div class="mt-2">
+                    <span class="badge bg-light text-dark border font-mono">
+                        <i class="bi bi-shield-check text-emerald me-1"></i> FBR No: {{ invoice.fbr_invoice_number }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Buyer Info -->
+        <div class="row g-4 py-4 border-bottom">
+            <div class="col-12 col-md-6">
+                <span class="badge bg-primary-subtle text-primary fs-xs fw-bold px-2 py-1 mb-2">BUYER (CUSTOMER)</span>
+                <h5 class="fw-bold text-dark mb-1">{{ invoice.customer.name }}</h5>
+                <div class="text-muted fs-sm">{{ invoice.customer.address or 'Address on file' }}</div>
+                <div class="text-muted fs-sm">{{ invoice.customer.city or '' }} {{ invoice.customer.province }}</div>
+            </div>
+
+            <div class="col-12 col-md-6 text-md-end">
+                <div class="fs-sm mb-1">
+                    <span class="text-muted">Buyer Classification:</span>
+                    <span class="badge {{ 'bg-success-subtle text-success' if invoice.customer.buyer_type == 'Registered' else 'bg-warning-subtle text-warning-emphasis' }} ms-1">
+                        {{ invoice.customer.buyer_type }}
+                    </span>
+                </div>
+                <div class="font-mono fs-sm">
+                    {% if invoice.customer.buyer_type == 'Registered' %}
+                        <strong>Buyer NTN:</strong> {{ invoice.customer.ntn or 'N/A' }} <br>
+                        <strong>Buyer STRN:</strong> {{ invoice.customer.strn or 'N/A' }}
+                    {% else %}
+                        <strong>Buyer CNIC:</strong> {{ invoice.customer.cnic or 'Not Provided' }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Line Items Table -->
+        <div class="table-responsive my-4">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Item Description</th>
+                        <th>HS Code</th>
+                        <th class="text-center">UOM</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Unit Price (PKR)</th>
+                        <th class="text-end">Value of Supply</th>
+                        <th class="text-end">Sales Tax (18%)</th>
+                        <th class="text-end">Further Tax</th>
+                        <th class="text-end">Total Amount (PKR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for it in invoice.items %}
+                    <tr>
+                        <td class="text-center text-muted font-mono">{{ loop.index }}</td>
+                        <td>
+                            <strong class="text-dark">{{ it.description }}</strong>
+                            {% if it.item_code %}
+                            <small class="text-muted d-block font-mono fs-xs">{{ it.item_code }}</small>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-light text-dark border font-mono">{{ it.hs_code }}</span></td>
+                        <td class="text-center font-mono">{{ it.uom }}</td>
+                        <td class="text-end font-mono">{{ it.quantity }}</td>
+                        <td class="text-end font-mono">{{ "{:,.2f}".format(it.unit_price) }}</td>
+                        <td class="text-end font-mono">{{ "{:,.2f}".format(it.value_of_supply) }}</td>
+                        <td class="text-end font-mono text-primary">
+                            {{ "{:,.2f}".format(it.sales_tax_amount) }}
+                            <small class="text-muted fs-xs">({{ it.sales_tax_rate }}%)</small>
+                        </td>
+                        <td class="text-end font-mono text-warning">
+                            {{ "{:,.2f}".format(it.further_tax_amount) }}
+                            {% if it.further_tax_rate > 0 %}
+                            <small class="fs-xs">({{ it.further_tax_rate }}%)</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-end font-mono fw-bold text-dark">
+                            {{ "{:,.2f}".format(it.total_amount) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Financial Summary with Pakistani Rupees in Words -->
+        <div class="row g-4 align-items-center">
+            <div class="col-12 col-md-7">
+                <div class="p-3 bg-light rounded border">
+                    <span class="fw-bold fs-xs text-muted text-uppercase d-block mb-1">
+                        <i class="bi bi-cash-stack me-1 text-emerald"></i> Amount in Words (Pakistani Currency):
+                    </span>
+                    <div class="fw-bold text-dark fs-sm font-serif">
+                        {{ invoice.grand_total | pkr_words }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-5">
+                <div class="card border bg-light">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between mb-2 fs-sm">
+                            <span class="text-muted">Total Value of Supply:</span>
+                            <span class="font-mono fw-bold">PKR {{ "{:,.2f}".format(invoice.total_value_of_supply) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 fs-sm">
+                            <span class="text-muted">Sales Tax (18%):</span>
+                            <span class="font-mono fw-bold text-primary">PKR {{ "{:,.2f}".format(invoice.total_sales_tax) }}</span>
+                        </div>
+                        {% if invoice.total_further_tax > 0 %}
+                        <div class="d-flex justify-content-between mb-2 fs-sm">
+                            <span class="text-muted">Further Tax (4% Unreg):</span>
+                            <span class="font-mono fw-bold text-warning">PKR {{ "{:,.2f}".format(invoice.total_further_tax) }}</span>
+                        </div>
+                        {% endif %}
+                        {% if invoice.total_discount > 0 %}
+                        <div class="d-flex justify-content-between mb-2 fs-sm">
+                            <span class="text-muted">Discount:</span>
+                            <span class="font-mono text-danger">- PKR {{ "{:,.2f}".format(invoice.total_discount) }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="border-top my-2 pt-2 d-flex justify-content-between align-items-center">
+                            <strong class="fs-6 text-dark">Grand Total:</strong>
+                            <strong class="fs-5 font-mono text-emerald">PKR {{ "{:,.2f}".format(invoice.grand_total) }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if invoice.remarks %}
+        <div class="mt-4 pt-3 border-top">
+            <span class="fw-bold fs-xs text-muted text-uppercase">Remarks / Terms:</span>
+            <p class="m-0 fs-sm text-dark">{{ invoice.remarks }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Technical FBR DI JSON Audit Inspector -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+        <h6 class="m-0 fw-bold text-dark">
+            <i class="bi bi-code-square text-primary me-1"></i> Technical FBR DI V1.12 JSON Inspector
+        </h6>
+        <span class="fs-xs text-muted">Auditable PRAL / FBR Transmissions</span>
+    </div>
+    <div class="card-body p-0">
+        <ul class="nav nav-tabs px-3 pt-2" id="jsonTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fs-sm" id="request-tab" data-bs-toggle="tab" data-bs-target="#requestPane" type="button" role="tab">
+                    Transmitted Request JSON Payload
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fs-sm" id="response-tab" data-bs-toggle="tab" data-bs-target="#responsePane" type="button" role="tab">
+                    FBR Response JSON Payload
+                </button>
+            </li>
+        </ul>
+        <div class="tab-content p-3 bg-dark text-white rounded-bottom" id="jsonTabsContent">
+            <div class="tab-pane fade show active" id="requestPane" role="tabpanel">
+                <pre class="m-0 font-mono fs-xs text-light" style="max-height: 300px; overflow-y: auto;">{{ invoice.fbr_request_payload or '// Request payload will be generated when submitted to FBR' }}</pre>
+            </div>
+            <div class="tab-pane fade" id="responsePane" role="tabpanel">
+                <pre class="m-0 font-mono fs-xs text-light" style="max-height: 300px; overflow-y: auto;">{{ invoice.fbr_response_payload or '// Awaiting response from FBR DI Gateway' }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function shareViaWhatsApp() {
+    const customerPhone = "{{ (invoice.customer.phone or '') | replace(' ', '') | replace('-', '') }}";
+    const invoiceNo = "{{ invoice.invoice_number }}";
+    const buyerName = "{{ invoice.customer.name }}";
+    const totalAmount = "PKR {{ '{:,.2f}'.format(invoice.grand_total) }}";
+    const fbrNo = "{{ invoice.fbr_invoice_number or 'Verified' }}";
+    const printUrl = window.location.origin + "{{ url_for('invoices.print_invoice', id=invoice.id) }}";
+
+    let msg = `*SALES TAX INVOICE - FBR DIGITAL INVOICING*\n\n` +
+              `*Dear ${buyerName},*\n` +
+              `Thank you for your business! Your digital tax invoice has been generated:\n\n` +
+              `📄 *Invoice No:* ${invoiceNo}\n` +
+              `💰 *Total Amount:* ${totalAmount}\n` +
+              `🏛️ *FBR Fiscal No:* ${fbrNo}\n` +
+              `🔗 *View / Print Invoice:* ${printUrl}\n\n` +
+              `_Issued under Section 23 of Sales Tax Act 1990 & SRO 350(I)/2024._`;
+
+    let targetPhone = customerPhone;
+    if (!targetPhone || targetPhone.length < 10) {
+        targetPhone = prompt("Enter customer WhatsApp Mobile number (e.g. 03001234567 or 923001234567):", "");
+        if (!targetPhone) return;
+    }
+
+    targetPhone = targetPhone.replace(/[^0-9]/g, '');
+    if (targetPhone.startsWith('03')) {
+        targetPhone = '92' + targetPhone.substring(1);
+    }
+
+    const waUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+}
+</script>
+{% endblock %}

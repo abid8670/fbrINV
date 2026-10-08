@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Excel Invoicing Center - FBR Digital Invoicing{% endblock %}
+{% block page_title %}Excel Migration & Batch Processing Center{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Intro Card -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm bg-sidebar text-white">
+            <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h5 class="fw-bold mb-1 text-white">
+                        <i class="bi bi-file-earmark-excel text-success me-2"></i> Transition Seamlessly from Excel to Direct FBR DI API
+                    </h5>
+                    <p class="text-white-50 fs-sm m-0">
+                        Instead of manual Excel tax filing, download our standardized templates, bulk upload your transactions, and let the system transmit them directly to FBR's Digital Invoicing Gateway.
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('excel_ops.export_invoices') }}" class="btn btn-emerald text-white fw-semibold">
+                        <i class="bi bi-download me-1"></i> Export All Invoices to Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Invoices Section -->
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-dark">
+                    <i class="bi bi-receipt-cutoff text-primary me-1"></i> 1. Bulk Invoices Upload
+                </h6>
+                <a href="{{ url_for('excel_ops.template_invoices') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-download me-1"></i> Download Template (.xlsx)
+                </a>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted fs-sm">
+                    Upload your sales invoices spreadsheet. The system will group multiple line items by <strong>Invoice Number</strong>, automatically create or link customers, calculate 18% Sales Tax and 4% Further Tax, and create ready-to-file Draft invoices.
+                </p>
+
+                <form action="{{ url_for('excel_ops.import_invoices') }}" method="POST" enctype="multipart/form-data" class="mt-3">
+                    <div class="mb-3">
+                        <label class="form-label fs-sm fw-semibold">Select Excel File (.xlsx, .xls, .csv)</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                    </div>
+
+                    <div class="p-3 bg-light rounded border fs-xs text-muted mb-3">
+                        <strong>Expected Columns:</strong><br>
+                        <code>Invoice Number</code>, <code>Invoice Date</code>, <code>Buyer Name</code>, <code>Buyer Type</code>, <code>Buyer NTN/CNIC</code>, <code>Item Code</code>, <code>Description</code>, <code>HS Code</code>, <code>UOM</code>, <code>Quantity</code>, <code>Unit Price</code>, <code>Sales Tax Rate</code>.
+                    </div>
+                    <div class="form-check form-switch p-3 bg-light rounded border mb-3">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" id="auto_submit_fbr" name="auto_submit_fbr" value="yes">
+                        <label class="form-check-label fw-bold fs-xs text-dark" for="auto_submit_fbr">
+                            <i class="bi bi-lightning-charge-fill text-warning me-1"></i> Auto-Submit imported invoices directly to FBR DI Gateway
+                        </label>
+                        <div class="fs-xs text-muted mt-1 ps-4">
+                            If checked, the system will immediately validate and push each imported invoice to FBR DI API without needing manual review.
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                        <i class="bi bi-cloud-arrow-up me-1"></i> Upload & Process Invoices
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Catalog Section -->
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                <h6 class="m-0 fw-bold text-dark">
+                    <i class="bi bi-box-seam text-success me-1"></i> 2. Bulk Items Master Upload
+                </h6>
+                <a href="{{ url_for('excel_ops.template_items') }}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-download me-1"></i> Download Template (.xlsx)
+                </a>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted fs-sm">
+                    Bulk import your product catalog, prices, and Pakistan Customs HS Codes in seconds. If an item SKU already exists, its pricing and HS code will be automatically updated.
+                </p>
+
+                <form action="{{ url_for('excel_ops.import_items') }}" method="POST" enctype="multipart/form-data" class="mt-3">
+                    <div class="mb-3">
+                        <label class="form-label fs-sm fw-semibold">Select Items File (.xlsx, .xls, .csv)</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                    </div>
+
+                    <div class="p-3 bg-light rounded border fs-xs text-muted mb-3">
+                        <strong>Expected Columns:</strong><br>
+                        <code>Item Code</code>, <code>Item Name / Description</code>, <code>HS Code</code>, <code>UOM</code>, <code>Unit Price</code>, <code>Sales Tax Rate (%)</code>.
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 fw-semibold">
+                        <i class="bi bi-cloud-arrow-up me-1"></i> Upload & Sync Catalog Items
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

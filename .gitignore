@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging (Exceeds GitHub 100MB file limit)
+build/
+dist/
+.tmp/
+*.spec
+
+# Local environment & secrets
+.env
+*.db
+instance/*.db
+backups/
+uploads/
+
+# OS generated files
+.DS_Store
+Thumbs.db

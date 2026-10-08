@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tax Invoice - {{ invoice.invoice_number }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #000;
+            background: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        .invoice-box {
+            max-width: 850px;
+            margin: auto;
+            border: 1px solid #ddd;
+            padding: 25px;
+        }
+        .header-title {
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1.4rem;
+        }
+        .tax-table th {
+            background-color: #f2f2f2 !important;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            border: 1px solid #000;
+            padding: 6px;
+        }
+        .tax-table td {
+            font-size: 0.8rem;
+            border: 1px solid #000;
+            padding: 6px;
+        }
+        .font-mono {
+            font-family: Consolas, 'Courier New', monospace;
+        }
+        @media print {
+            body { padding: 0; }
+            .invoice-box { border: none; padding: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print text-center mb-3">
+        <button onclick="window.print()" class="btn btn-primary px-4 me-2">
+            <i class="bi bi-printer me-1"></i> Print / Save as PDF
+        </button>
+        <button onclick="window.close()" class="btn btn-outline-secondary px-3">
+            Close
+        </button>
+    </div>
+
+    <div class="invoice-box">
+        <!-- Top Title -->
+        <div class="text-center pb-2 mb-3 border-bottom">
+            <h4 class="header-title m-0">
+                {% if invoice.invoice_type == 'Credit Note' %}
+                    Sales Tax Credit Note (Return of Goods)
+                {% elif invoice.invoice_type == 'Debit Note' %}
+                    Sales Tax Debit Note (Adjustment)
+                {% else %}
+                    Sales Tax Invoice
+                {% endif %}
+            </h4>
+            <div class="small text-muted">(Issued under Section 23 of the Sales Tax Act, 1990)</div>
+        </div>
+
+        <!-- Supplier & Invoice Metas -->
+        <div class="row mb-3 align-items-start">
+            <div class="col-7">
+                <h5 class="fw-bold m-0">{{ settings.company_name }}</h5>
+                <div class="small">{{ settings.business_address }}</div>
+                <div class="small">{{ settings.city }}, {{ settings.province }} &bull; Ph: {{ settings.phone }}</div>
+                <div class="small mt-1 font-mono">
+                    <strong>Supplier NTN:</strong> {{ settings.ntn }} &nbsp;|&nbsp; <strong>STRN:</strong> {{ settings.strn }}
+                </div>
+            </div>
+
+            <div class="col-5 text-end">
+                <div class="font-mono"><strong>Invoice No:</strong> {{ invoice.invoice_number }}</div>
+                <div class="small font-mono"><strong>Date:</strong> {{ invoice.invoice_date.strftime('%d-%m-%Y') }}</div>
+                <div class="small"><strong>Type:</strong> {{ invoice.invoice_type }}</div>
+                {% if invoice.fbr_invoice_number %}
+                <div class="mt-2 p-1 border rounded bg-light text-start d-inline-block">
+                    <div class="small fw-bold text-success"><i class="bi bi-patch-check-fill"></i> FBR DI Registered</div>
+                    <div class="small font-mono fw-bold">{{ invoice.fbr_invoice_number }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- If Credit / Debit note, display original reference -->
+        {% if invoice.original_fbr_invoice_number or invoice.reason_for_issuance %}
+        <div class="p-2 mb-3 border rounded bg-light font-mono small">
+            <div><strong>Referenced Original Invoice:</strong> {{ invoice.original_fbr_invoice_number }}</div>
+            <div><strong>Reason for Issuance:</strong> {{ invoice.reason_for_issuance }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Buyer Information -->
+        <div class="p-2 mb-3 border rounded bg-light">
+            <div class="row align-items-center">
+                <div class="col-7">
+                    <div class="small fw-bold text-muted text-uppercase">Buyer (Recipient Details):</div>
+                    <div class="fw-bold">{{ invoice.customer.name }}</div>
+                    <div class="small">{{ invoice.customer.address or '' }} {{ invoice.customer.city or '' }}</div>
+                </div>
+                <div class="col-5 text-end font-mono small">
+                    <div><strong>Buyer Status:</strong> {{ invoice.customer.buyer_type }}</div>
+                    {% if invoice.customer.buyer_type == 'Registered' %}
+                        <div><strong>Buyer NTN:</strong> {{ invoice.customer.ntn or 'N/A' }}</div>
+                        <div><strong>Buyer STRN:</strong> {{ invoice.customer.strn or 'N/A' }}</div>
+                    {% else %}
+                        <div><strong>Buyer CNIC:</strong> {{ invoice.customer.cnic or 'N/A' }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Line Items Table -->
+        <table class="table tax-table align-middle w-100 mb-2">
+            <thead>
+                <tr>
+                    <th style="width: 30px;">#</th>
+                    <th>Description of Goods / Services</th>
+                    <th>HS Code</th>
+                    <th class="text-center">UOM</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Price (PKR)</th>
+                    <th class="text-end">Value of Supply</th>
+                    <th class="text-end">ST (18%)</th>
+                    <th class="text-end">Further Tax</th>
+                    <th class="text-end">Total (PKR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in invoice.items %}
+                <tr>
+                    <td class="text-center">{{ loop.index }}</td>
+                    <td>
+                        <strong>{{ it.description }}</strong>
+                        {% if it.item_code %}<span class="text-muted small">({{ it.item_code }})</span>{% endif %}
+                    </td>
+                    <td class="font-mono">{{ it.hs_code }}</td>
+                    <td class="text-center">{{ it.uom }}</td>
+                    <td class="text-end font-mono">{{ it.quantity }}</td>
+                    <td class="text-end font-mono">{{ "{:,.2f}".format(it.unit_price) }}</td>
+                    <td class="text-end font-mono">{{ "{:,.2f}".format(it.value_of_supply) }}</td>
+                    <td class="text-end font-mono">{{ "{:,.2f}".format(it.sales_tax_amount) }}</td>
+                    <td class="text-end font-mono">{{ "{:,.2f}".format(it.further_tax_amount) }}</td>
+                    <td class="text-end font-mono fw-bold">{{ "{:,.2f}".format(it.total_amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="6" class="text-end fw-bold">Total (PKR):</td>
+                    <td class="text-end font-mono fw-bold">{{ "{:,.2f}".format(invoice.total_value_of_supply) }}</td>
+                    <td class="text-end font-mono fw-bold">{{ "{:,.2f}".format(invoice.total_sales_tax) }}</td>
+                    <td class="text-end font-mono fw-bold">{{ "{:,.2f}".format(invoice.total_further_tax) }}</td>
+                    <td class="text-end font-mono fw-bold fs-6">{{ "{:,.2f}".format(invoice.grand_total) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Amount in Words -->
+        <div class="p-2 mb-3 border rounded bg-light">
+            <span class="small fw-bold text-muted text-uppercase">Amount in Words:</span>
+            <div class="fw-bold small">{{ invoice.grand_total | pkr_words }}</div>
+        </div>
+
+        <!-- Bottom Layout: QR Code, Terms & Signatures -->
+        <div class="row align-items-center mt-3 pt-2">
+            <div class="col-8">
+                <div class="d-flex align-items-center gap-3">
+                    {% if invoice.fbr_qr_image_base64 %}
+                    <img src="data:image/png;base64,{{ invoice.fbr_qr_image_base64 }}" alt="FBR QR" style="width: 100px; height: 100px; border: 1px solid #000;">
+                    {% endif %}
+                    <div>
+                        <div class="small fw-bold">FBR Digital Verification QR Code</div>
+                        <div class="small text-muted font-mono" style="font-size: 0.7rem; max-width: 360px; word-break: break-all;">
+                            {{ invoice.fbr_qr_code_data or 'FBR Digital Invoicing Compliant' }}
+                        </div>
+                        <div class="small text-muted mt-1" style="font-size: 0.7rem;">
+                            Verify at <strong>https://iris.fbr.gov.pk/verify</strong> or FBR Asaan Tax App
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-4 text-center">
+                <div style="height: 55px;"></div>
+                <div class="border-top border-dark pt-1 small fw-bold">
+                    Authorized Signatory & Stamp
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

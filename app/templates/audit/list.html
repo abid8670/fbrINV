@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}System Audit Logs - FBR DI{% endblock %}
+{% block page_title %}Audit Trail & Activity Logs{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ url_for('audit.index') }}" class="row g-2 align-items-center">
+            <div class="col-12 col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="action" class="form-control" placeholder="Search actions (e.g. Created, Submitted, Updated)..." value="{{ action_filter }}">
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4">
+                <select name="entity_type" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Entities</option>
+                    <option value="Invoice" {{ 'selected' if entity_filter == 'Invoice' else '' }}>Invoices</option>
+                    <option value="Customer" {{ 'selected' if entity_filter == 'Customer' else '' }}>Customers</option>
+                    <option value="Item" {{ 'selected' if entity_filter == 'Item' else '' }}>Items Catalog</option>
+                    <option value="User" {{ 'selected' if entity_filter == 'User' else '' }}>Users</option>
+                    <option value="Settings" {{ 'selected' if entity_filter == 'Settings' else '' }}>Settings</option>
+                    <option value="Excel" {{ 'selected' if entity_filter == 'Excel' else '' }}>Excel Hub</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <button type="submit" class="btn btn-outline-secondary w-100">Filter Logs</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+        <h6 class="m-0 fw-bold text-dark">
+            <i class="bi bi-clock-history text-primary me-1"></i> Recent System Activity
+        </h6>
+        <span class="fs-xs text-muted">Showing last {{ logs|length }} operations</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 font-mono fs-sm">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 170px;">Timestamp</th>
+                    <th>User</th>
+                    <th>Action Performed</th>
+                    <th>Entity</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if logs %}
+                    {% for l in logs %}
+                    <tr>
+                        <td class="text-muted fs-xs">
+                            {{ l.created_at.strftime('%d-%b-%Y %I:%M:%S %p') }}
+                        </td>
+                        <td>
+                            {% if l.user %}
+                                <strong class="text-dark">{{ l.user.username }}</strong>
+                                <span class="badge bg-secondary-subtle text-secondary fs-xs">{{ l.user.role }}</span>
+                            {% else %}
+                                <span class="text-muted">System</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-dark fw-semibold">{{ l.action }}</div>
+                            {% if l.details %}
+                                <div class="text-muted fs-xs" style="max-width: 450px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    {{ l.details }}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if l.entity_type %}
+                                <span class="badge bg-light text-dark border">{{ l.entity_type }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted fs-xs">
+                            {{ l.ip_address or 'Local' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-journal-text fs-2 d-block mb-2 text-secondary"></i>
+                            No activity logs found.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

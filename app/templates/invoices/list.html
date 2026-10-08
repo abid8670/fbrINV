@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Sales Invoices - FBR Digital Invoicing{% endblock %}
+{% block page_title %}Sales Tax Invoices{% endblock %}
+
+{% block content %}
+<!-- Top Filter Bar -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ url_for('invoices.index') }}" class="row g-2 align-items-center">
+            <div class="col-12 col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="Search Invoice #, FBR #, or Customer..." value="{{ search }}">
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="FBR_Submitted" {{ 'selected' if current_status == 'FBR_Submitted' else '' }}>FBR Registered / Verified</option>
+                    <option value="Draft" {{ 'selected' if current_status == 'Draft' else '' }}>Draft (Pending Submission)</option>
+                    <option value="Failed" {{ 'selected' if current_status == 'Failed' else '' }}>Failed / Rejected</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <select name="customer_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Customers</option>
+                    {% for c in customers %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12 col-md-2 text-md-end d-flex gap-2 justify-content-md-end">
+                <a href="{{ url_for('excel_ops.export_invoices', status=current_status) }}" class="btn btn-outline-success" title="Export to Excel">
+                    <i class="bi bi-file-earmark-arrow-down"></i> Excel
+                </a>
+                <a href="{{ url_for('invoices.create') }}" class="btn btn-emerald text-white">
+                    <i class="bi bi-plus-lg me-1"></i> New
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Batch Actions Bar -->
+<div class="card border-0 shadow-sm mb-3 border-start border-4 border-warning">
+    <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-warning text-dark px-2 py-1 fs-xs fw-bold">
+                <i class="bi bi-lightning-charge-fill me-1"></i> FBR BATCH PROCESSING
+            </span>
+            <span class="text-muted fs-sm">
+                <strong id="selectedCount" class="text-dark">0</strong> invoices selected
+            </span>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="btnSubmitSelected" disabled onclick="submitBatch(false)">
+                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Submit Selected (<span id="selectedCountBtn">0</span>) to FBR
+            </button>
+            <button type="button" class="btn btn-sm btn-warning text-dark fw-bold" onclick="submitBatch(true)">
+                <i class="bi bi-send-check-fill me-1"></i> Submit All Pending Drafts to FBR
+            </button>
+        </div>
+    </div>
+</div>
+
+<form id="batchSubmitForm" method="POST" action="{{ url_for('invoices.batch_submit') }}">
+    <input type="hidden" name="submit_all_drafts" id="submitAllDraftsInput" value="false">
+
+    <!-- Invoices Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;" class="text-center">
+                            <input type="checkbox" id="selectAllCheckbox" class="form-check-input" title="Select all unsubmitted drafts">
+                        </th>
+                        <th>Invoice No</th>
+                        <th>Date</th>
+                        <th>Customer / Buyer</th>
+                        <th>FBR Fiscal No</th>
+                        <th class="text-end">Value of Supply</th>
+                        <th class="text-end">Sales Tax (18%)</th>
+                        <th class="text-end">Total (PKR)</th>
+                        <th>FBR Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if invoices %}
+                        {% for inv in invoices %}
+                        <tr>
+                            <td class="text-center">
+                                {% if inv.status != 'FBR_Submitted' %}
+                                    <input type="checkbox" name="invoice_ids" value="{{ inv.id }}" class="form-check-input invoice-select-cb" onchange="updateSelectedCount()">
+                                {% else %}
+                                    <i class="bi bi-check-circle-fill text-success fs-sm" title="Already Registered with FBR"></i>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('invoices.view', id=inv.id) }}" class="fw-bold text-dark text-decoration-none">
+                                    {{ inv.invoice_number }}
+                                </a>
+                                <div class="fs-xs text-muted">{{ inv.invoice_type }}</div>
+                            </td>
+                            <td class="text-muted fs-xs font-mono">
+                                {{ inv.invoice_date.strftime('%d-%b-%Y') }}
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ inv.customer.name }}</div>
+                                <small class="text-muted fs-xs">
+                                    <span class="badge {{ 'bg-success-subtle text-success' if inv.customer.buyer_type == 'Registered' else 'bg-secondary-subtle text-secondary' }} px-1">
+                                        {{ inv.customer.buyer_type }}
+                                    </span>
+                                    {{ inv.customer.ntn or inv.customer.cnic or '' }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if inv.fbr_invoice_number %}
+                                    <span class="badge bg-light text-dark border font-mono fs-xs">
+                                        <i class="bi bi-shield-check text-emerald me-1"></i> {{ inv.fbr_invoice_number }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted fs-xs italic">&mdash; Not Submitted &mdash;</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end font-mono">
+                                {{ "{:,.2f}".format(inv.total_value_of_supply) }}
+                            </td>
+                            <td class="text-end font-mono text-primary">
+                                {{ "{:,.2f}".format(inv.total_sales_tax) }}
+                                {% if inv.total_further_tax > 0 %}
+                                    <div class="fs-xs text-warning">+{{ "{:,.2f}".format(inv.total_further_tax) }} FT</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end font-mono fw-bold text-dark">
+                                {{ "{:,.2f}".format(inv.grand_total) }}
+                            </td>
+                            <td>
+                                {% if inv.status == 'FBR_Submitted' %}
+                                    <span class="badge badge-status badge-fbr-submitted">
+                                        <i class="bi bi-check-circle me-1"></i> Registered
+                                    </span>
+                                {% elif inv.status == 'Draft' %}
+                                    <span class="badge badge-status badge-draft">
+                                        <i class="bi bi-clock me-1"></i> Draft
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-status badge-failed" title="{{ inv.fbr_response_message }}">
+                                        <i class="bi bi-exclamation-triangle me-1"></i> Failed
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('invoices.view', id=inv.id) }}" class="btn btn-light border" title="View Invoice">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('invoices.print_invoice', id=inv.id) }}" target="_blank" class="btn btn-light border" title="Print Sales Tax Invoice">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                    <a href="{{ url_for('invoices.print_thermal', id=inv.id) }}" target="_blank" class="btn btn-light border text-primary" title="Print 80mm POS Slip">
+                                        <i class="bi bi-receipt"></i>
+                                    </a>
+                                    {% if inv.status != 'FBR_Submitted' %}
+                                    <form action="{{ url_for('invoices.post_fbr', id=inv.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Submit invoice {{ inv.invoice_number }} to FBR Digital Invoicing System?');">
+                                        <button type="submit" class="btn btn-light border text-emerald" title="Push to FBR DI API">
+                                            <i class="bi bi-cloud-arrow-up-fill"></i>
+                                        </button>
+                                    </form>
+                                    <form action="{{ url_for('invoices.delete', id=inv.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete draft invoice {{ inv.invoice_number }}?');">
+                                        <button type="submit" class="btn btn-light border text-danger" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="bi bi-receipt fs-2 d-block mb-2 text-secondary"></i>
+                                No sales invoices found matching your criteria.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+<script>
+function updateSelectedCount() {
+    const cbs = document.querySelectorAll('.invoice-select-cb:checked');
+    const count = cbs.length;
+    const countEl = document.getElementById('selectedCount');
+    const countBtnEl = document.getElementById('selectedCountBtn');
+    const btn = document.getElementById('btnSubmitSelected');
+    if (countEl) countEl.innerText = count;
+    if (countBtnEl) countBtnEl.innerText = count;
+    if (btn) btn.disabled = (count === 0);
+}
+
+document.getElementById('selectAllCheckbox')?.addEventListener('change', function() {
+    const cbs = document.querySelectorAll('.invoice-select-cb');
+    cbs.forEach(cb => cb.checked = this.checked);
+    updateSelectedCount();
+});
+
+function submitBatch(allDrafts) {
+    const form = document.getElementById('batchSubmitForm');
+    const allInput = document.getElementById('submitAllDraftsInput');
+    allInput.value = allDrafts ? 'true' : 'false';
+    const checkedCount = document.querySelectorAll('.invoice-select-cb:checked').length;
+    const msg = allDrafts 
+        ? "Submit ALL pending draft invoices in the database to FBR Digital Invoicing Gateway?" 
+        : `Submit the ${checkedCount} selected invoice(s) directly to FBR?`;
+    if (confirm(msg)) {
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

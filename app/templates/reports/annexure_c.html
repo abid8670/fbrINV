@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Sales Tax Annexure-C (Monthly Return) - FBR DI{% endblock %}
+{% block page_title %}Sales Tax Annexure-C (Monthly Return){% endblock %}
+
+{% block content %}
+<!-- Top Filter Bar -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ url_for('reports.annexure_c') }}" class="row g-2 align-items-center">
+            <div class="col-6 col-md-3">
+                <label class="form-label fs-xs fw-bold text-muted mb-1">Tax Period Month</label>
+                <select name="month" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {{ 'selected' if month == m else '' }}>
+                        {{ ['January','February','March','April','May','June','July','August','September','October','November','December'][m-1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label fs-xs fw-bold text-muted mb-1">Tax Year</label>
+                <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for y in range(2024, 2030) %}
+                    <option value="{{ y }}" {{ 'selected' if year == y else '' }}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label fs-xs fw-bold text-muted mb-1">FBR Status Filter</label>
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="FBR_Submitted" {{ 'selected' if status_filter == 'FBR_Submitted' else '' }}>FBR Registered Only</option>
+                    <option value="All" {{ 'selected' if status_filter == 'All' else '' }}>All Invoices (Inc. Drafts)</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4 text-md-end mt-auto">
+                <a href="{{ url_for('reports.export_annexure_c', month=month, year=year, status=status_filter) }}" class="btn btn-sm btn-emerald text-white fw-semibold w-100">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Export Annexure-C (.xlsx)
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Cards for IRIS Return Filing -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body p-3">
+                <span class="fs-xs fw-bold text-muted text-uppercase tracking-wider">Total Value of Supply</span>
+                <h4 class="fw-bold my-1 text-dark">PKR {{ "{:,.2f}".format(total_value) }}</h4>
+                <div class="d-flex justify-content-between fs-xs text-muted mt-2">
+                    <span>Registered: <strong>PKR {{ "{:,.0f}".format(reg_value) }}</strong></span>
+                    <span>Unregistered: <strong>PKR {{ "{:,.0f}".format(unreg_value) }}</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body p-3">
+                <span class="fs-xs fw-bold text-muted text-uppercase tracking-wider">Standard Sales Tax (18%)</span>
+                <h4 class="fw-bold my-1 text-primary">PKR {{ "{:,.2f}".format(total_sales_tax) }}</h4>
+                <div class="d-flex justify-content-between fs-xs text-muted mt-2">
+                    <span>Registered: <strong>PKR {{ "{:,.0f}".format(reg_tax) }}</strong></span>
+                    <span>Unregistered: <strong>PKR {{ "{:,.0f}".format(unreg_tax) }}</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body p-3">
+                <span class="fs-xs fw-bold text-muted text-uppercase tracking-wider">Further Tax (4% Unreg)</span>
+                <h4 class="fw-bold my-1 text-warning">PKR {{ "{:,.2f}".format(total_further_tax) }}</h4>
+                <div class="fs-xs text-muted mt-2">
+                    Total Output Tax: <strong class="text-dark">PKR {{ "{:,.2f}".format(total_sales_tax + total_further_tax) }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Table for Annexure-C -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+        <h6 class="m-0 fw-bold text-dark">
+            <i class="bi bi-table text-emerald me-1"></i> Transaction Log for {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1] }} {{ year }}
+        </h6>
+        <span class="badge bg-light text-dark border">{{ invoices|length }} Invoices</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>FBR Fiscal No</th>
+                    <th>Inv #</th>
+                    <th>Date</th>
+                    <th>Buyer Name</th>
+                    <th>Buyer Type</th>
+                    <th>NTN / CNIC</th>
+                    <th class="text-end">Value (PKR)</th>
+                    <th class="text-end">ST (18%)</th>
+                    <th class="text-end">FT (4%)</th>
+                    <th class="text-end">Total Bill</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if invoices %}
+                    {% for inv in invoices %}
+                    <tr>
+                        <td class="font-mono fs-xs">
+                            {% if inv.fbr_invoice_number %}
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-shield-check text-emerald me-1"></i> {{ inv.fbr_invoice_number }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis">Draft</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('invoices.view', id=inv.id) }}" class="fw-bold text-dark text-decoration-none">
+                                {{ inv.invoice_number }}
+                            </a>
+                        </td>
+                        <td class="text-muted fs-xs font-mono">{{ inv.invoice_date.strftime('%d-%m-%Y') }}</td>
+                        <td class="fw-semibold text-dark">{{ inv.customer.name }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-success-subtle text-success' if inv.customer.buyer_type == 'Registered' else 'bg-secondary-subtle text-secondary' }} px-1">
+                                {{ inv.customer.buyer_type }}
+                            </span>
+                        </td>
+                        <td class="font-mono fs-xs">
+                            {{ inv.customer.ntn or inv.customer.cnic or '-' }}
+                        </td>
+                        <td class="text-end font-mono">{{ "{:,.2f}".format(inv.total_value_of_supply) }}</td>
+                        <td class="text-end font-mono text-primary">{{ "{:,.2f}".format(inv.total_sales_tax) }}</td>
+                        <td class="text-end font-mono text-warning">{{ "{:,.2f}".format(inv.total_further_tax) }}</td>
+                        <td class="text-end font-mono fw-bold text-dark">{{ "{:,.2f}".format(inv.grand_total) }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                            No sales invoices found for period {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1] }} {{ year }}.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

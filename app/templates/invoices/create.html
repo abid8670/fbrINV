@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Create {{ preset_type or 'Sales Invoice' }} - FBR DI{% endblock %}
+{% block page_title %}New {{ preset_type or 'Sales Tax Invoice' }}{% endblock %}
+
+{% block content %}
+<form method="POST" id="invoiceForm">
+    <input type="hidden" id="defaultTaxRate" value="{{ settings.default_tax_rate }}">
+    <input type="hidden" id="defaultFurtherRate" value="{{ settings.default_further_tax_rate }}">
+
+    <!-- Hidden json catalog items data -->
+    <script type="application/json" id="catalogData">
+        [
+            {% for it in items %}
+            {
+                "id": {{ it.id }},
+                "item_code": {{ it.item_code|tojson }},
+                "name": {{ it.name|tojson }},
+                "hs_code": {{ it.hs_code|tojson }},
+                "uom": {{ it.uom|tojson }},
+                "unit_price": {{ it.unit_price }},
+                "sales_tax_rate": {{ it.sales_tax_rate }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]
+    </script>
+
+    {% if ref_invoice %}
+    <div class="alert alert-info border-info-subtle d-flex align-items-center mb-4 shadow-sm">
+        <i class="bi bi-link-45deg fs-4 me-2"></i>
+        <div>
+            <strong>Issuing Note for Original Invoice:</strong>
+            <span class="font-mono fw-bold">{{ ref_invoice.invoice_number }}</span>
+            {% if ref_invoice.fbr_invoice_number %}
+                &bull; FBR Fiscal No: <span class="font-mono fw-bold">{{ ref_invoice.fbr_invoice_number }}</span>
+            {% endif %}
+            &bull; Original Total: <strong>PKR {{ "{:,.2f}".format(ref_invoice.grand_total) }}</strong>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Top Invoice Header Details Card -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+            <h6 class="m-0 fw-bold text-dark">
+                <i class="bi bi-file-earmark-text text-emerald me-1"></i> Invoice Header Information
+            </h6>
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-xs text-muted">FBR Target:</span>
+                <span class="badge bg-dark text-white font-mono fs-xs">{{ settings.fbr_environment|upper }}</span>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-12 col-md-3">
+                    <label class="form-label fs-sm fw-semibold">Invoice Number <span class="text-danger">*</span></label>
+                    <input type="text" name="invoice_number" class="form-control font-mono fw-bold" value="{{ next_inv_no }}" required>
+                    <small class="text-muted fs-xs">Sequential internal reference</small>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label class="form-label fs-sm fw-semibold">Invoice Date <span class="text-danger">*</span></label>
+                    <input type="date" name="invoice_date" class="form-control font-mono" value="{{ today }}" required>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label class="form-label fs-sm fw-semibold">Transaction Scenario / Type <span class="text-danger">*</span></label>
+                    <select name="invoice_type" id="invoiceTypeSelect" class="form-select">
+                        <option value="Sales Invoice" {{ 'selected' if preset_type == 'Sales Invoice' else '' }}>Sales Invoice (SN001)</option>
+                        <option value="Credit Note" {{ 'selected' if preset_type == 'Credit Note' else '' }}>Credit Note / Sales Return (SN003)</option>
+                        <option value="Debit Note" {{ 'selected' if preset_type == 'Debit Note' else '' }}>Debit Note / Adjustment (SN002)</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label class="form-label fs-sm fw-semibold">Payment Mode</label>
+                    <select name="payment_mode" class="form-select">
+                        <option value="Cash">Cash</option>
+                        <option value="Cheque">Cheque</option>
+                        <option value="Online Transfer">Online / Bank Transfer</option>
+                        <option value="Credit">Credit / Account</option>
+                    </select>
+                </div>
+
+                <!-- Credit/Debit Note Reference Row (conditional or shown if not standard) -->
+                <div class="col-12" id="adjustmentFields" style="{{ 'display: block;' if preset_type in ['Credit Note', 'Debit Note'] else 'display: none;' }}">
+                    <div class="p-3 bg-light rounded border">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fs-sm fw-semibold">Original FBR Invoice No / Reference</label>
+                                <input type="text" name="original_fbr_invoice_number" class="form-control font-mono" placeholder="e.g. FBR-DI-202610061041-171523 or INV-2026-0001" value="{{ ref_invoice.fbr_invoice_number or ref_invoice.invoice_number if ref_invoice else '' }}">
+                                <input type="hidden" name="original_invoice_id" value="{{ ref_invoice.id if ref_invoice else '' }}">
+                                <small class="text-muted fs-xs">Mandatory under Sales Tax Act 1990 for credit/debit adjustments</small>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fs-sm fw-semibold">Reason for Issuance</label>
+                                <select name="reason_for_issuance" class="form-select">
+                                    <option value="Return of Damaged Goods">Return of Damaged Goods</option>
+                                    <option value="Defective / Quality Rejection">Defective / Quality Rejection</option>
+                                    <option value="Price Revision / Overbilling Correction">Price Revision / Overbilling Correction</option>
+                                    <option value="Post-Sale Commercial Discount">Post-Sale Commercial Discount</option>
+                                    <option value="Cancellation of Order">Cancellation of Order</option>
+                                    <option value="Underbilling Adjustment (Debit Note)">Underbilling Adjustment (Debit Note)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buyer Selector -->
+                <div class="col-12 col-md-8">
+                    <label class="form-label fs-sm fw-semibold">Customer / Buyer <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <select name="customer_id" id="customerSelect" class="form-select" required>
+                            <option value="">-- Choose Registered or Unregistered Buyer --</option>
+                            {% for c in customers %}
+                            <option value="{{ c.id }}" {{ 'selected' if ref_invoice and ref_invoice.customer_id == c.id else '' }}>
+                                {{ c.name }} ({{ c.buyer_type }} - {{ c.ntn or c.cnic or 'No Tax ID' }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <a href="{{ url_for('customers.create') }}" target="_blank" class="btn btn-outline-secondary" title="Add New Customer">
+                            <i class="bi bi-person-plus"></i> New
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4 d-flex align-items-end">
+                    <div class="p-2 border rounded bg-light w-100">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="fs-xs fw-bold text-muted">Buyer Status:</span>
+                            <span id="buyerTypeBadge" class="badge bg-secondary">Select Buyer</span>
+                        </div>
+                        <div id="buyerDetailsText" class="fs-xs text-muted text-truncate">
+                            Please choose a customer to view tax credentials.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Line Items Card -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+            <h6 class="m-0 fw-bold text-dark">
+                <i class="bi bi-list-check text-emerald me-1"></i> Supply Line Items (Pakistan HS Codes & Sales Tax)
+            </h6>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="addRowBtn">
+                <i class="bi bi-plus-lg me-1"></i> Add Line Item
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0" id="invoiceItemsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Item Description & Catalog</th>
+                        <th>HS Code</th>
+                        <th>UOM</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Unit Price</th>
+                        <th class="text-end">Value of Supply</th>
+                        <th class="text-center">Tax %</th>
+                        <th class="text-end">Discount</th>
+                        <th class="text-end">Total (PKR)</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="invoiceItemsBody">
+                    <!-- Dynamic rows generated by invoice_form.js -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bottom Summary & Action Bar -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <label class="form-label fs-sm fw-semibold">Invoice Remarks / Special Notes</label>
+                    <textarea name="remarks" class="form-control" rows="3" placeholder="Additional notes or payment terms to appear on the invoice...">{{ 'Credit Note adjustment' if preset_type == 'Credit Note' else '' }}</textarea>
+                    
+                    <div class="mt-3 p-3 bg-light rounded border fs-xs text-muted">
+                        <div class="fw-bold text-dark mb-1">
+                            <i class="bi bi-shield-check text-success me-1"></i> FBR Compliance Note:
+                        </div>
+                        Pursuant to SRO 350(I)/2024 and Sales Tax Act 1990, supplies to unregistered buyers attract an additional <strong>{{ settings.default_further_tax_rate }}% Further Tax</strong> unless specifically exempt under the 6th/8th schedule.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div class="card border-0 shadow-sm bg-white">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Financial Tax Summary</h6>
+
+                    <div class="d-flex justify-content-between mb-2 fs-sm">
+                        <span class="text-muted">Total Value of Supply:</span>
+                        <strong class="font-mono text-dark" id="summarySubtotal">PKR 0.00</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2 fs-sm">
+                        <span class="text-muted">Sales Tax (18%):</span>
+                        <strong class="font-mono text-primary" id="summarySalesTax">PKR 0.00</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2 fs-sm">
+                        <span class="text-muted">Further Tax (4% Unreg):</span>
+                        <strong class="font-mono text-warning" id="summaryFurtherTax">PKR 0.00</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2 fs-sm">
+                        <span class="text-muted">Total Discount:</span>
+                        <span class="font-mono text-danger" id="summaryDiscount">- PKR 0.00</span>
+                    </div>
+
+                    <div class="border-top my-2 pt-2 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold fs-5 text-dark">Grand Net Total:</span>
+                        <span class="fw-bold fs-4 font-mono text-emerald" id="summaryGrandTotal">PKR 0.00</span>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        {% if current_user.has_perm('can_submit_fbr') %}
+                        <button type="submit" name="action" value="fbr_submit" class="btn btn-emerald text-white py-2 fw-semibold shadow-sm">
+                            <i class="bi bi-cloud-arrow-up-fill me-1"></i> Save & Submit to FBR DI API
+                        </button>
+                        {% endif %}
+                        <button type="submit" name="action" value="draft" class="btn btn-outline-secondary py-2">
+                            <i class="bi bi-save me-1"></i> Save as Draft (Local Only)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/invoice_form.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const invTypeSelect = document.getElementById('invoiceTypeSelect');
+    const adjFields = document.getElementById('adjustmentFields');
+    if (invTypeSelect && adjFields) {
+        invTypeSelect.addEventListener('change', function() {
+            if (this.value === 'Credit Note' || this.value === 'Debit Note') {
+                adjFields.style.display = 'block';
+            } else {
+                adjFields.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

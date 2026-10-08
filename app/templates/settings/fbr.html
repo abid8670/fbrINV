@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}FBR Settings - Digital Invoicing{% endblock %}
+{% block page_title %}FBR Integration & Company Profile{% endblock %}
+
+{% block content %}
+<div class="row g-4 justify-content-center">
+    <div class="col-12 col-xl-10">
+        <form method="POST">
+            <!-- Company Profile Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 fw-bold text-dark">
+                        <i class="bi bi-building text-emerald me-1"></i> Seller / Supplier Master Profile
+                    </h6>
+                    <small class="text-muted">These details appear on your sales tax invoices and are posted to FBR</small>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Company / Business Name <span class="text-danger">*</span></label>
+                            <input type="text" name="company_name" class="form-control" value="{{ settings.company_name }}" required>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">Seller NTN <span class="text-danger">*</span></label>
+                            <input type="text" name="ntn" class="form-control font-mono" placeholder="1234567-8" value="{{ settings.ntn }}" required>
+                            <small class="text-muted fs-xs">National Tax Number</small>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fs-sm fw-semibold">Seller STRN <span class="text-danger">*</span></label>
+                            <input type="text" name="strn" class="form-control font-mono" placeholder="1234567890123" value="{{ settings.strn }}" required>
+                            <small class="text-muted fs-xs">Sales Tax Registration No.</small>
+                        </div>
+
+                        <div class="col-12 col-md-8">
+                            <label class="form-label fs-sm fw-semibold">Registered Business Address <span class="text-danger">*</span></label>
+                            <input type="text" name="business_address" class="form-control" value="{{ settings.business_address }}" required>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">City</label>
+                            <input type="text" name="city" class="form-control" value="{{ settings.city }}">
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">Tax Province / Territory</label>
+                            <select name="province" class="form-select">
+                                {% for prov in ['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 'Islamabad', 'Gilgit-Baltistan', 'Azad Kashmir'] %}
+                                <option value="{{ prov }}" {{ 'selected' if settings.province == prov else '' }}>{{ prov }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">Contact Phone</label>
+                            <input type="text" name="phone" class="form-control" value="{{ settings.phone }}">
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">Official Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ settings.email }}">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">POS / Terminal ID</label>
+                            <input type="text" name="pos_id" class="form-control font-mono" value="{{ settings.pos_id }}">
+                            <small class="text-muted fs-xs">Identifier assigned in IRIS portal</small>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Branch Code</label>
+                            <input type="text" name="branch_code" class="form-control font-mono" value="{{ settings.branch_code }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FBR DI API Gateway Configuration -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="m-0 fw-bold text-dark">
+                            <i class="bi bi-shield-lock text-emerald me-1"></i> FBR Digital Invoicing (DI) API Gateway
+                        </h6>
+                        <small class="text-muted">PRAL REST API OAuth 2.0 / Bearer Authentication Parameters</small>
+                    </div>
+                    <span class="badge bg-emerald-subtle text-emerald fs-xs px-2 py-1">
+                        Token Validity: ~5 Years
+                    </span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">Integration Environment <span class="text-danger">*</span></label>
+                            <select name="fbr_environment" id="fbrEnvSelect" class="form-select">
+                                <option value="mock" {{ 'selected' if settings.fbr_environment == 'mock' else '' }}>
+                                    Mock Sandbox (Instant Local Simulation)
+                                </option>
+                                <option value="sandbox" {{ 'selected' if settings.fbr_environment == 'sandbox' else '' }}>
+                                    PRAL Staging / Sandbox Gateway
+                                </option>
+                                <option value="production" {{ 'selected' if settings.fbr_environment == 'production' else '' }}>
+                                    PRAL Production Live Gateway
+                                </option>
+                            </select>
+                            <small class="text-muted fs-xs">Use 'Mock' for tests before IP whitelisting.</small>
+                        </div>
+
+                        <div class="col-12 col-md-8">
+                            <label class="form-label fs-sm fw-semibold">FBR DI API Endpoint URL <span class="text-danger">*</span></label>
+                            <input type="url" name="fbr_api_url" id="fbrApiUrl" class="form-control font-mono" value="{{ settings.fbr_api_url }}" required>
+                            <small class="text-muted fs-xs">PRAL Digital Invoicing Post Invoice URL</small>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fs-sm fw-semibold">FBR DI Bearer Token</label>
+                            <div class="input-group">
+                                <input type="password" name="fbr_bearer_token" id="bearerTokenInput" class="form-control font-mono" placeholder="Enter Bearer Token generated from IRIS / PRAL Portal" value="{{ settings.fbr_bearer_token }}">
+                                <button type="button" class="btn btn-outline-secondary" id="toggleTokenBtn" title="Toggle Visibility">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted fs-xs">
+                                Passed in HTTP Request Header: <code>Authorization: Bearer &lt;token&gt;</code>
+                            </small>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Default Sales Tax Rate (%)</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" name="default_tax_rate" class="form-control" value="{{ settings.default_tax_rate }}">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-sm fw-semibold">Further Tax Rate (%) for Unregistered</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" name="default_further_tax_rate" class="form-control" value="{{ settings.default_further_tax_rate }}">
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <small class="text-muted fs-xs">Standard is 4.0% for unregistered buyers</small>
+                        </div>
+                    </div>
+
+                    <!-- Test Connection Box -->
+                    <div class="mt-4 pt-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <button type="button" id="testConnBtn" class="btn btn-outline-primary btn-sm fw-semibold">
+                                <i class="bi bi-wifi me-1"></i> Test FBR DI API Connection
+                            </button>
+                            <span id="connStatus" class="ms-2 fs-sm"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Voice Assistant Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="m-0 fw-bold text-dark">
+                            <i class="bi bi-soundwave text-emerald me-1"></i> AI Voice Assistant & Audio Guidance
+                        </h6>
+                        <small class="text-muted">Conversational audio announcements for invoice verification, alerts, and summaries</small>
+                    </div>
+                    <span class="badge bg-emerald-subtle text-emerald fs-xs px-2 py-1">Voice Narration</span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <div class="form-check form-switch pt-2">
+                                <input class="form-check-input" type="checkbox" name="ai_voice_enabled" id="aiVoiceCheck" {{ 'checked' if cfg.ai_voice.enabled else '' }}>
+                                <label class="form-check-label fw-bold fs-sm text-dark" for="aiVoiceCheck">
+                                    Enable Audio Assistant
+                                </label>
+                                <small class="text-muted d-block fs-xs">Speaks notifications and invoice status</small>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">Spoken Language</label>
+                            <select name="ai_voice_language" id="settingsVoiceLang" class="form-select">
+                                <option value="en-US" {{ 'selected' if cfg.ai_voice.language == 'en-US' else '' }}>English (en-US)</option>
+                                <option value="ur-PK" {{ 'selected' if cfg.ai_voice.language == 'ur-PK' else '' }}>Urdu (Pakistan - ur-PK)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-sm fw-semibold">Voice Provider</label>
+                            <select name="ai_voice_provider" id="settingsVoiceProvider" class="form-select">
+                                <option value="browser" {{ 'selected' if cfg.ai_voice.provider == 'browser' else '' }}>Native Browser Speech (Free / Offline / Zero Setup)</option>
+                                <option value="google_ai_studio" {{ 'selected' if cfg.ai_voice.provider == 'google_ai_studio' else '' }}>Google AI Studio (Gemini AI Free API Key)</option>
+                                <option value="google_tts" {{ 'selected' if cfg.ai_voice.provider == 'google_tts' else '' }}>Google Cloud Neural TTS (Google Cloud GCP)</option>
+                                <option value="openai" {{ 'selected' if cfg.ai_voice.provider == 'openai' else '' }}>OpenAI Voice API (Optional)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-8">
+                            <label class="form-label fs-sm fw-semibold">AI Studio / Cloud API Key <small class="text-muted">(Optional - aistudio.google.com se free key yahan lagayein)</small></label>
+                            <input type="password" name="ai_voice_api_key" id="settingsVoiceApiKey" class="form-control font-mono" placeholder="AIzaSy... (Google AI Studio Free API Key)" value="{{ cfg.ai_voice.api_key or '' }}">
+                            <div class="form-text fs-xs text-muted">Google AI Studio se li gayi free API key ke liye provider mein <b>Google AI Studio (Gemini AI)</b> select karein.</div>
+                        </div>
+
+                        <div class="col-12 col-md-4 d-flex align-items-start pt-md-4">
+                            <button type="button" id="testVoiceBtn" class="btn btn-outline-dark w-100" onclick="testSettingsVoice()">
+                                <i class="bi bi-volume-up-fill me-1"></i> Test Voice & API Key
+                            </button>
+                        </div>
+
+                        <div class="col-12">
+                            <div id="voiceStatusMsg" class="fs-xs fw-semibold"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Database Engine Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="m-0 fw-bold text-dark">
+                            <i class="bi bi-database-check text-primary me-1"></i> Active Database Engine
+                        </h6>
+                        <small class="text-muted">Storage backend configuration</small>
+                    </div>
+                    <span class="badge bg-dark text-white font-mono text-uppercase fs-xs px-2 py-1">
+                        {{ cfg.db_type }}
+                    </span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div>
+                            <div class="fs-sm fw-bold text-dark">Current Engine: <span class="text-uppercase text-emerald">{{ cfg.db_type }}</span></div>
+                            <small class="text-muted font-mono fs-xs">{{ cfg.sqlalchemy_uri }}</small>
+                        </div>
+                        <a href="{{ url_for('setup.index') }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-repeat me-1"></i> Switch Database Engine / Re-run Wizard
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-top p-3 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-emerald text-white fw-semibold px-4">
+                        <i class="bi bi-check2-circle me-1"></i> Save All Settings
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Official References Card -->
+        <div class="card border-0 shadow-sm bg-light">
+            <div class="card-body p-4">
+                <h6 class="fw-bold text-dark mb-2"><i class="bi bi-book text-primary me-1"></i> FBR Technical Documentation & Reference Links</h6>
+                <div class="row g-2 fs-sm">
+                    <div class="col-12 col-md-6">
+                        <a href="https://download1.fbr.gov.pk/Docs/20257301172130815TechnicalDocumentationforDIAPIV1.12.pdf" target="_blank" class="text-decoration-none d-flex align-items-center p-2 rounded bg-white border">
+                            <i class="bi bi-file-earmark-pdf text-danger fs-4 me-2"></i>
+                            <div>
+                                <strong class="text-dark">FBR Technical Docs (DI API V1.12)</strong>
+                                <div class="text-muted fs-xs">Complete JSON models, scenarios & endpoints</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <a href="https://dicrm.pral.com.pk/downloads" target="_blank" class="text-decoration-none d-flex align-items-center p-2 rounded bg-white border">
+                            <i class="bi bi-globe text-primary fs-4 me-2"></i>
+                            <div>
+                                <strong class="text-dark">PRAL DICRM Download Center</strong>
+                                <div class="text-muted fs-xs">Token management & sandbox access</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('toggleTokenBtn');
+    const tokenInput = document.getElementById('bearerTokenInput');
+    const testBtn = document.getElementById('testConnBtn');
+    const statusSpan = document.getElementById('connStatus');
+    const envSelect = document.getElementById('fbrEnvSelect');
+    const urlInput = document.getElementById('fbrApiUrl');
+
+    if (toggleBtn && tokenInput) {
+        toggleBtn.addEventListener('click', function () {
+            if (tokenInput.type === 'password') {
+                tokenInput.type = 'text';
+                toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+            } else {
+                tokenInput.type = 'password';
+                toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
+            }
+        });
+    }
+
+    if (envSelect && urlInput) {
+        envSelect.addEventListener('change', function () {
+            if (this.value === 'production') {
+                urlInput.value = 'https://di-api.pral.com.pk/api/v1/di/postinvoicedata';
+            } else if (this.value === 'sandbox') {
+                urlInput.value = 'https://staging-di.pral.com.pk/api/v1/di/postinvoicedata';
+            } else {
+                urlInput.value = 'https://staging-di.pral.com.pk/api/v1/di/postinvoicedata';
+            }
+        });
+    }
+
+    if (testBtn) {
+        testBtn.addEventListener('click', function () {
+            statusSpan.innerHTML = '<span class="text-primary"><i class="spinner-border spinner-border-sm me-1"></i> Testing connection...</span>';
+            testBtn.disabled = true;
+
+            fetch('{{ url_for("settings.test_connection") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                testBtn.disabled = false;
+                if (data.success) {
+                    statusSpan.innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> ${data.message}</span>`;
+                } else {
+                    statusSpan.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i> ${data.message}</span>`;
+                }
+            })
+            .catch(err => {
+                testBtn.disabled = false;
+                statusSpan.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i> Request failed: ${err.message}</span>`;
+            });
+        });
+    }
+});
+
+function testSettingsVoice() {
+    const statusMsg = document.getElementById('voiceStatusMsg');
+    const btn = document.getElementById('testVoiceBtn');
+    const lang = document.getElementById('settingsVoiceLang').value;
+    const provider = document.getElementById('settingsVoiceProvider').value;
+    const apiKey = document.getElementById('settingsVoiceApiKey').value;
+
+    statusMsg.innerHTML = '<span class="text-primary"><i class="spinner-border spinner-border-sm me-1"></i> Testing voice connection & validating API key...</span>';
+    btn.disabled = true;
+
+    fetch('{{ url_for("settings.test_voice") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            provider: provider,
+            api_key: apiKey,
+            language: lang
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        if (data.success) {
+            statusMsg.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i> ${data.message}</span>`;
+            if (data.audio_base64 && window.fbrPlayBase64) {
+                window.fbrPlayBase64(data.audio_base64);
+            } else if (data.text_to_speak && window.fbrSpeak) {
+                window.fbrSpeak(data.text_to_speak, lang);
+            }
+        } else {
+            statusMsg.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i> ${data.message}</span>`;
+            // Fallback audio test even if API key had error
+            const fallbackMsg = (lang === 'ur-PK') ? "API key me masla hai, lekin browser native audio active hai." : "API key error, but browser native speech is active.";
+            if (window.fbrSpeak) window.fbrSpeak(fallbackMsg, lang);
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        statusMsg.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i> Error: ${err.message}</span>`;
+        if (window.fbrSpeak) window.fbrSpeak("Browser speech active", lang);
+    });
+}
+</script>
+{% endblock %}

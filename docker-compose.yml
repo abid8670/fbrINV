@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: fbr_invoicing_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - SECRET_KEY=fbr-production-secure-key-replace-in-env
+      # If using PostgreSQL service below, uncomment this:
+      # - DATABASE_URL=postgresql+psycopg2://fbr_user:fbr_secure_pass@db:5432/fbr_invoicing
+    volumes:
+      - ./instance:/app/instance
+      - ./uploads:/app/uploads
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: fbr_postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fbr_invoicing
+      POSTGRES_USER: fbr_user
+      POSTGRES_PASSWORD: fbr_secure_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
