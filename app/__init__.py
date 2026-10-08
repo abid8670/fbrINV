@@ -105,6 +105,13 @@ def create_app(config_class=Config):
             self.wsgi_app = wsgi_app
 
         def __call__(self, environ, start_response):
+            if environ.get('HTTP_X_DEBUG') == '1':
+                import json
+                headers_to_show = {k: str(v) for k, v in environ.items() if not k.startswith('wsgi.')}
+                body = json.dumps(headers_to_show, indent=2).encode('utf-8')
+                start_response('200 OK', [('Content-Type', 'application/json'), ('Content-Length', str(len(body)))])
+                return [body]
+
             path = environ.get('PATH_INFO', '')
             if path in ('/api/index', '/api/index.py', '/api/index/', '/api/index.py/'):
                 environ['PATH_INFO'] = '/'
