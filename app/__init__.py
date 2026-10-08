@@ -99,6 +99,38 @@ def create_app(config_class=Config):
         except Exception as e:
             print(f"Cold-start database init notice: {e}")
 
+    # Vercel Serverless & Reverse Proxy compatibility middleware
+    class VercelPathFixMiddleware:
+        def __init__(self, wsgi_app):
+            self.wsgi_app = wsgi_app
+
+        def __call__(self, environ, start_response):
+            matched_path = environ.get('HTTP_X_MATCHED_PATH') or environ.get('HTTP_X_FORWARDED_URI')
+            if matched_path:
+                clean_path = matched_path.split('?')[0]
+                if clean_path and not clean_path.startswith('/api/index'):
+                    environ['PATH_INFO'] = clean_path
+                elif clean_path == '/api/index' or clean_path == '/api/index/':
+                    environ['PATH_INFO'] = '/'
+            else:
+                path = environ.get('PATH_INFO', '')
+                if path == '/api/index' or path == '/api/index/':
+                    environ['PATH_INFO'] = '/'
+                elif path.startswith('/api/index/'):
+                    environ['PATH_INFO'] = path[len('/api/index'):]
+
+            return self.wsgi_app(environ, start_response)
+
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    app.wsgi_app = VercelPathFixMiddleware(app.wsgi_app)
+
+    @app.route('/api/index')
+    @app.route('/api/index/')
+    def vercel_entrypoint_redirect():
+        from flask import redirect, url_for
+        return redirect(url_for('dashboard.index'))
+
     return app
 
 def run_sqlite_schema_migrations():
