@@ -13,7 +13,10 @@ INSTANCE_DIR = os.path.abspath(os.path.join(get_app_dir(), 'instance'))
 CONFIG_FILE = os.path.join(INSTANCE_DIR, 'app_config.json')
 
 def ensure_instance_dir():
-    os.makedirs(INSTANCE_DIR, exist_ok=True)
+    try:
+        os.makedirs(INSTANCE_DIR, exist_ok=True)
+    except OSError:
+        pass
 
 def is_configured():
     """Returns True if the system has completed the first-time setup or has existing users."""
@@ -77,9 +80,12 @@ def get_config():
 
 def save_config(cfg_dict):
     """Saves updated configuration to instance/app_config.json."""
-    ensure_instance_dir()
-    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-        json.dump(cfg_dict, f, indent=4)
+    try:
+        ensure_instance_dir()
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cfg_dict, f, indent=4)
+    except OSError:
+        pass
 
 def build_sqlalchemy_uri(db_type, params=None):
     """Constructs SQLAlchemy Database URI for SQLite, MySQL, or PostgreSQL."""

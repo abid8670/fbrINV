@@ -19,6 +19,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = raw_db_url or _cfg.get('sqlalchemy_uri', default_sqlite)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+    is_serverless = bool(os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'))
+    UPLOAD_FOLDER = '/tmp/uploads' if is_serverless else os.path.join(BASE_DIR, 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload
+
 

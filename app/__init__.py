@@ -28,7 +28,14 @@ def create_app(config_class=Config):
     app = Flask(__name__, template_folder=templates_dir, static_folder=static_dir)
     app.config.from_object(config_class)
 
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    except OSError:
+        app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+        try:
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        except OSError:
+            pass
 
     db.init_app(app)
     login_manager.init_app(app)
