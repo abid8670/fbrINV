@@ -92,9 +92,12 @@ def create_app(config_class=Config):
     app.register_blueprint(ai_bp)
 
     with app.app_context():
-        db.create_all()
-        run_sqlite_schema_migrations()
-        seed_initial_data()
+        try:
+            db.create_all()
+            run_sqlite_schema_migrations()
+            seed_initial_data()
+        except Exception as e:
+            print(f"Cold-start database init notice: {e}")
 
     return app
 
