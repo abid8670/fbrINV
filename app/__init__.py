@@ -105,19 +105,13 @@ def create_app(config_class=Config):
             self.wsgi_app = wsgi_app
 
         def __call__(self, environ, start_response):
-            matched_path = environ.get('HTTP_X_MATCHED_PATH') or environ.get('HTTP_X_FORWARDED_URI')
-            if matched_path:
-                clean_path = matched_path.split('?')[0]
-                if clean_path and not clean_path.startswith('/api/index'):
-                    environ['PATH_INFO'] = clean_path
-                elif clean_path == '/api/index' or clean_path == '/api/index/':
-                    environ['PATH_INFO'] = '/'
-            else:
-                path = environ.get('PATH_INFO', '')
-                if path == '/api/index' or path == '/api/index/':
-                    environ['PATH_INFO'] = '/'
-                elif path.startswith('/api/index/'):
-                    environ['PATH_INFO'] = path[len('/api/index'):]
+            path = environ.get('PATH_INFO', '')
+            if path in ('/api/index', '/api/index.py', '/api/index/', '/api/index.py/'):
+                environ['PATH_INFO'] = '/'
+            elif path.startswith('/api/index.py/'):
+                environ['PATH_INFO'] = path[len('/api/index.py'):]
+            elif path.startswith('/api/index/'):
+                environ['PATH_INFO'] = path[len('/api/index'):]
 
             return self.wsgi_app(environ, start_response)
 
@@ -126,7 +120,9 @@ def create_app(config_class=Config):
     app.wsgi_app = VercelPathFixMiddleware(app.wsgi_app)
 
     @app.route('/api/index')
+    @app.route('/api/index.py')
     @app.route('/api/index/')
+    @app.route('/api/index.py/')
     def vercel_entrypoint_redirect():
         from flask import redirect, url_for
         return redirect(url_for('dashboard.index'))
