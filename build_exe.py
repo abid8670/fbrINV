@@ -46,6 +46,8 @@ def build_standalone_exe():
         "--hidden-import=sqlite3",
         "--hidden-import=pymysql",
         "--hidden-import=psycopg2",
+        "--hidden-import=psycopg",
+        "--hidden-import=psycopg_binary",
         "--hidden-import=waitress",
         "--hidden-import=openpyxl",
         "--hidden-import=pandas",
