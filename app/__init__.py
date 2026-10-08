@@ -100,25 +100,33 @@ def create_app(config_class=Config):
             print(f"Cold-start database init notice: {e}")
 
     # Vercel Serverless & Reverse Proxy compatibility middleware
+    import urllib.parse
+
     class VercelPathFixMiddleware:
         def __init__(self, wsgi_app):
             self.wsgi_app = wsgi_app
 
         def __call__(self, environ, start_response):
-            if environ.get('HTTP_X_DEBUG') == '1':
-                import json
-                headers_to_show = {k: str(v) for k, v in environ.items() if not k.startswith('wsgi.')}
-                body = json.dumps(headers_to_show, indent=2).encode('utf-8')
-                start_response('200 OK', [('Content-Type', 'application/json'), ('Content-Length', str(len(body)))])
-                return [body]
-
-            path = environ.get('PATH_INFO', '')
-            if path in ('/api/index', '/api/index.py', '/api/index/', '/api/index.py/'):
-                environ['PATH_INFO'] = '/'
-            elif path.startswith('/api/index.py/'):
-                environ['PATH_INFO'] = path[len('/api/index.py'):]
-            elif path.startswith('/api/index/'):
-                environ['PATH_INFO'] = path[len('/api/index'):]
+            qs = environ.get('QUERY_STRING', '')
+            if '__path=' in qs:
+                params = urllib.parse.parse_qs(qs, keep_blank_values=True)
+                if '__path' in params and params['__path']:
+                    target_path = params['__path'][0]
+                    if not target_path.startswith('/'):
+                        target_path = '/' + target_path
+                    while '//' in target_path:
+                        target_path = target_path.replace('//', '/')
+                    environ['PATH_INFO'] = target_path
+                    filtered = [part for part in qs.split('&') if not part.startswith('__path=')]
+                    environ['QUERY_STRING'] = '&'.join(filtered)
+            else:
+                path = environ.get('PATH_INFO', '')
+                if path in ('/api/index', '/api/index.py', '/api/index/', '/api/index.py/'):
+                    environ['PATH_INFO'] = '/'
+                elif path.startswith('/api/index.py/'):
+                    environ['PATH_INFO'] = path[len('/api/index.py'):]
+                elif path.startswith('/api/index/'):
+                    environ['PATH_INFO'] = path[len('/api/index'):]
 
             return self.wsgi_app(environ, start_response)
 
