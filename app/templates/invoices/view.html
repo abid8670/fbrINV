@@ -5,12 +5,12 @@
 
 {% block content %}
 <!-- Top Action Bar -->
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
-    <div class="d-flex align-items-center gap-2">
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div class="d-flex flex-wrap align-items-center gap-2">
         <a href="{{ url_for('invoices.index') }}" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> Invoices
         </a>
-        <span class="text-muted">|</span>
+        <span class="text-muted d-none d-sm-inline">|</span>
         <span class="fs-sm fw-bold text-dark">{{ invoice.invoice_number }}</span>
         <span class="badge {{ 'bg-success-subtle text-success border border-success-subtle' if invoice.status == 'FBR_Submitted' else ('bg-warning-subtle text-warning-emphasis border border-warning-subtle' if invoice.status == 'Draft' else 'bg-danger-subtle text-danger border border-danger-subtle') }}">
             {{ invoice.status }}
@@ -18,7 +18,7 @@
         <span class="badge bg-secondary-subtle text-secondary border fs-xs">{{ invoice.invoice_type }}</span>
     </div>
 
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex flex-wrap align-items-center gap-2">
         <a href="{{ url_for('invoices.print_invoice', id=invoice.id) }}" target="_blank" class="btn btn-sm btn-outline-dark">
             <i class="bi bi-printer me-1"></i> A4 Print / PDF
         </a>
