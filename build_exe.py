@@ -26,7 +26,7 @@ def build_standalone_exe():
     os.environ['TMP'] = temp_dir
 
     print("==================================================================")
-    print(" [*] Building FBR Digital Invoicing Windows Standalone App (.EXE)")
+    print(" [*] Building FiscalSync DI Windows Standalone App (.EXE)")
     print("==================================================================")
     print(f" [*] Working Directory: {base_dir}")
     print(f" [*] Output Directory:  {dist_dir}")
@@ -92,7 +92,7 @@ def build_standalone_exe():
         launcher_bat = os.path.join(target_dir, "START_FBR_SYSTEM.bat")
         with open(launcher_bat, "w", encoding="utf-8") as f:
             f.write("@echo off\n")
-            f.write("title FBR Digital Invoicing System\n")
+            f.write("title FiscalSync DI - Enterprise FBR Invoicing\n")
             f.write("cd /d \"%~dp0\"\n")
             f.write("start \"\" \"FBR_Digital_Invoicing.exe\"\n")
 
@@ -100,7 +100,7 @@ def build_standalone_exe():
         readme_txt = os.path.join(target_dir, "README_INSTRUCTIONS.txt")
         with open(readme_txt, "w", encoding="utf-8") as f:
             f.write("=================================================================\n")
-            f.write(" 🇵🇰 FBR DIGITAL INVOICING SYSTEM (STANDALONE WINDOWS APP)\n")
+            f.write(" 🇵🇰 FISCALSYNC DI • ENTERPRISE FBR INVOICING SUITE (STANDALONE)\n")
             f.write("=================================================================\n\n")
             f.write("HOW TO RUN:\n")
             f.write("1. Double click 'FBR_Digital_Invoicing.exe' (or START_FBR_SYSTEM.bat).\n")

@@ -30,7 +30,7 @@ if __name__ == '__main__':
     threads = int(os.environ.get('THREADS', 16))
 
     print("=========================================================================")
-    print(" 🚀 FBR DIGITAL INVOICING SYSTEM &bull; PRODUCTION WSGI SERVER (WAITRESS)")
+    print(" 🚀 FISCALSYNC DI • PRODUCTION WSGI SERVER (WAITRESS)")
     print("=========================================================================")
     print(f" [*] Local Machine Access:      http://127.0.0.1:{port}")
     print(f" [*] LAN Office / Shop Access:   http://{lan_ip}:{port}")

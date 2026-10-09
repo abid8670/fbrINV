@@ -1,9 +1,9 @@
 @echo off
-title FBR Digital Invoicing System - Production Server
+title FiscalSync DI - Production WSGI Server
 color 02
 
 echo =========================================================================
-echo  FBR DIGITAL INVOICING (DI) SYSTEM - PRODUCTION WSGI SERVER
+echo  FISCALSYNC DI - ENTERPRISE FBR DIGITAL INVOICING WSGI SERVER
 echo =========================================================================
 echo.
 echo Starting Multi-Threaded Production Server...

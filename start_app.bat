@@ -1,8 +1,8 @@
 @echo off
-title FBR Digital Invoicing System
+title FiscalSync DI - Enterprise FBR Invoicing
 color 0A
 echo =================================================================
-echo  FBR Digital Invoicing System (DI V1.12)
+echo  FiscalSync DI - Enterprise FBR Digital Invoicing Suite
 echo  Compliance with SRO 350(I)/2024 ^& Section 23 Sales Tax Act
 echo =================================================================
 echo.

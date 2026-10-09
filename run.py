@@ -42,7 +42,7 @@ if __name__ == '__main__':
     lan_ip = get_lan_ip()
 
     print("=================================================================")
-    print(" 🇵🇰 FBR DIGITAL INVOICING SYSTEM (DI V1.12 & SRO 350(I)/2024)")
+    print(" 🇵🇰 FISCALSYNC DI • ENTERPRISE FBR INVOICING SUITE (SRO 350(I)/2024)")
     print("=================================================================")
     print(f" [*] Local Web Interface: http://127.0.0.1:{port}")
     if lan_ip != "127.0.0.1":

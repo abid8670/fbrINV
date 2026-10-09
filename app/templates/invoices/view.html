@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ invoice.invoice_type }} {{ invoice.invoice_number }} - FBR DI{% endblock %}
+{% block title %}{{ invoice.invoice_type }} {{ invoice.invoice_number }} &bull; FiscalSync DI{% endblock %}
 {% block page_title %}{{ invoice.invoice_type }} &bull; {{ invoice.invoice_number }}{% endblock %}
 
 {% block content %}
@@ -339,7 +339,7 @@ function shareViaWhatsApp() {
     const fbrNo = "{{ invoice.fbr_invoice_number or 'Verified' }}";
     const printUrl = window.location.origin + "{{ url_for('invoices.print_invoice', id=invoice.id) }}";
 
-    let msg = `*SALES TAX INVOICE - FBR DIGITAL INVOICING*\n\n` +
+    let msg = `*SALES TAX INVOICE - FISCALSYNC DI (FBR COMPLIANT)*\n\n` +
               `*Dear ${buyerName},*\n` +
               `Thank you for your business! Your digital tax invoice has been generated:\n\n` +
               `📄 *Invoice No:* ${invoiceNo}\n` +

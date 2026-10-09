@@ -68,9 +68,9 @@ class AIVoiceService:
 
         if not sample_text:
             if language == 'ur-PK':
-                sample_text = "FBR Digital Invoicing System mein aapka khush amdeed. Humara AI Voice Assistant active hai."
+                sample_text = "FiscalSync DI Voice Assistant mein aapka khush amdeed. Humara AI Voice Assistant online aur active hai."
             else:
-                sample_text = "Welcome to FBR Digital Invoicing System. AI Voice Assistant is online and ready."
+                sample_text = "Welcome to FiscalSync DI. Enterprise AI Voice Assistant is online and ready."
 
         if provider == 'browser' or not api_key:
             return {
@@ -129,9 +129,9 @@ class AIVoiceService:
             candidates.insert(0, AIVoiceService._cached_model)
 
         prompt = (
-            "Say in one short sentence: 'FBR Digital Invoicing AI Assistant is active and ready.' "
+            "Say in one short sentence: 'FiscalSync DI Assistant is active and ready.' "
             if language != 'ur-PK'
-            else "Urdu mein aik mukhtasar jumla kahein: 'FBR Digital Invoicing AI Voice Assistant active hai.'"
+            else "Urdu mein aik mukhtasar jumla kahein: 'FiscalSync DI Voice Assistant active aur ready hai.'"
         )
         
         payload = {
@@ -326,7 +326,7 @@ class AIVoiceService:
 
         system_instruction = (
             "You are 'Munshi AI' (منشی صاحب), an expert, sharp, and friendly Pakistani Business Accountant and FBR Sales Tax Copilot. "
-            "You work inside the FBR Digital Invoicing & Billing Software in Pakistan.\n"
+            "You work inside 'FiscalSync DI' - the Enterprise FBR Digital Invoicing & Billing Software in Pakistan.\n"
             "CRITICAL CONVERSATIONAL RULES:\n"
             "1. NO REPETITIVE GREETINGS: Only greet ('Aadaab' / 'Salam') in the very FIRST turn of a conversation. "
             "In ongoing conversations or follow-up questions, NEVER start with 'Aadaab' or 'Jee janab' every time! Jump straight into the direct, natural answer.\n"
