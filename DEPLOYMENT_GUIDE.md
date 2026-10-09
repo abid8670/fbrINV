@@ -1,11 +1,12 @@
-# 🚀 FBR Digital Invoicing System - Complete Deployment Guide
+# 🚀 FiscalSync DI — Complete Enterprise Deployment Guide
 **Compliance:** FBR Digital Invoicing (DI) Specification V1.12 | SRO 350(I)/2024 | Section 23 of Sales Tax Act 1990  
-**Target Environments:** Standalone Windows PC, Multi-User Local Office Network (LAN), and Cloud/VPS (Docker).
+**Live Cloud Demo:** [https://fbrinv.vercel.app/](https://fbrinv.vercel.app/)  
+**Target Environments:** Standalone Windows PC, Multi-User Local Office Network (LAN), Serverless (Vercel), and Cloud/VPS (Docker).
 
 ---
 
 ## 📌 Executive Summary
-Aapka FBR Digital Invoicing Software mukammal tor par **Commercial & Ready-to-Sell** tayyar hai. Isme:
+**FiscalSync DI** mukammal tor par **Commercial & Ready-to-Sell** tayyar hai. Isme:
 1. **Interactive First-Run Setup Wizard (`/setup`)**: Database engine (SQLite / MySQL / PostgreSQL), Company Profile, Admin credentials, aur AI Voice auto-configure karta hai.
 2. **Bilingual AI Voice Assistant**: Google AI Studio (Gemini), Google Cloud Neural TTS, aur Zero-config Native Browser Speech dono support karta hai.
 3. **Flexible Deployment**: 1-Click Windows Batch, Standalone `.exe` compiler, Multi-Threaded Production WSGI Server (`Waitress`), aur Docker Cloud containers shamil hain.
